@@ -46,7 +46,7 @@ export default function OnboardingClient() {
       })
 
       if (!error) {
-        window.location.replace('/dashboard') // Принудительный редирект
+        window.location.replace('/dashboard')
       } else {
         alert('Ошибка сохранения: ' + error.message)
       }
@@ -55,11 +55,10 @@ export default function OnboardingClient() {
   }
 
   return (
+    // Убрали все minHeight, flex-direction и прочие хаки. Просто обычный блок с отступами.
     <main className="page active" style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      minHeight: 'calc(100vh - 60px)', // Высота экрана без топбара
-      padding: '0 var(--s6) env(safe-area-inset-bottom)',
+      padding: '0 var(--s6) calc(60px + env(safe-area-inset-bottom))',
+      display: 'block' 
     }}>
       
       {/* ИНДИКАТОР ПРОГРЕССА */}
@@ -80,8 +79,8 @@ export default function OnboardingClient() {
         ))}
       </div>
 
-      {/* КОНТЕНТ (Здесь сохранены все твои поля и тексты) */}
-      <div style={{ flex: 1 }}>
+      {/* КОНТЕНТ ШАГОВ */}
+      <div>
         {step === 1 && (
           <div className="fade-in">
             <h1 className="pg-title" style={{ fontSize: '32px', marginBottom: 'var(--s2)' }}>Как вас зовут?</h1>
@@ -158,17 +157,15 @@ export default function OnboardingClient() {
         )}
       </div>
 
-      {/* КНОПКИ (С фиксированным отступом снизу, чтобы не тонули в меню) */}
+      {/* КНОПКИ СТРОГО ПОД КОНТЕНТОМ */}
+      {/* marginTop: '32px' делает красивый отступ вниз от последнего поля ввода */}
       <div style={{ 
         display: 'flex', 
         gap: '12px', 
-        paddingBottom: 'calc(40px + env(safe-area-inset-bottom))', 
-        paddingTop: 'var(--s4)',
-        background: 'var(--bg)',
-        marginTop: 'auto' // Выталкивает кнопки максимально вниз
+        marginTop: '32px'
       }}>
         {step > 1 && (
-          <button className="btn btn-outline" style={{ flex: 1, height: '56px' }} onClick={prevStep}>
+          <button className="btn btn-outline" style={{ flex: 1, height: '56px', borderRadius: '16px' }} onClick={prevStep}>
             <ArrowLeft size={18} />
           </button>
         )}
