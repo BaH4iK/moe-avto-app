@@ -44,6 +44,7 @@ export default function ProfileClient() {
   const [user, setUser] = useState<any>(null)
   const [carPhotos, setCarPhotos] = useState<any[]>([])
 
+  // ФИКС ТИПОВ ДЛЯ VERCEL
   const [userData, setUserData] = useState<{
     name: string;
     city: string;
@@ -170,9 +171,10 @@ export default function ProfileClient() {
   }, [searchCity])
 
   const handleLogout = async () => {
+    setLoading(true)
     await supabase.auth.signOut()
-    // ИСПРАВЛЕНО: Принудительная перезагрузка для корректного выхода
-    window.location.href = '/auth';
+    // ИСПРАВЛЕНО: Полная замена истории для предотвращения ошибки "Page couldn't load"
+    window.location.replace('/auth')
   }
 
   if (loading && !saving) return <main className="page active" style={{display:'flex', alignItems:'center', justifyContent:'center'}}>Загрузка...</main>
@@ -300,3 +302,5 @@ export default function ProfileClient() {
     </main>
   )
 }
+
+// FORCE VERCEL DEPLOY: PROFILE CLIENT RECOVERY 2026

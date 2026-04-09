@@ -46,7 +46,8 @@ export default function OnboardingClient() {
       })
 
       if (!error) {
-        window.location.href = '/dashboard';
+        // Принудительный редирект для исключения ошибки "This page couldn't load"
+        window.location.replace('/dashboard')
       } else {
         alert('Ошибка сохранения: ' + error.message)
       }
@@ -160,8 +161,7 @@ export default function OnboardingClient() {
       <div style={{ 
         display: 'flex', 
         gap: '12px', 
-        /* ИСПРАВЛЕНО: Подняли блок кнопок регистрации еще выше */
-        paddingBottom: 'calc(var(--s8) + 40px + env(safe-area-inset-bottom))', 
+        paddingBottom: 'calc(var(--s8) + 60px + env(safe-area-inset-bottom))', 
         paddingTop: 'var(--s4)',
         background: 'var(--bg)',
         zIndex: 10

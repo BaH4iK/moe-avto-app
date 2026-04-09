@@ -69,21 +69,23 @@ h1,h2,h3,h4,h5{font-family:var(--font-d);line-height:1.2;text-wrap:balance}
 
 /* ── PAGES ── */
 .page{display:none;min-height:calc(100dvh - 56px - 54px - env(safe-area-inset-bottom,0px));
-  /* ИСПРАВЛЕНО: Увеличен нижний отступ до 140px, чтобы кнопки всегда всплывали над меню */
-  padding:calc(56px + var(--s4)) var(--s4) calc(140px + var(--safe-b) + var(--s4));
+  /* ИСПРАВЛЕНО: Увеличен отступ до 180px, чтобы кнопки всегда всплывали над меню */
+  padding:calc(56px + var(--s4)) var(--s4) calc(180px + var(--safe-b) + var(--s4));
   max-width:520px;margin:0 auto;flex-direction:column;gap:var(--s4);
   overflow-y: auto; -webkit-overflow-scrolling: touch;}
 .page.active{display:flex;animation:fadeUp .22s cubic-bezier(.16,1,.3,1) both}
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-
-/* Оставшиеся стили (Cards, Buttons, Inputs и т.д.) */
 .pg-head{margin-bottom:var(--s1)}
 .pg-title{font-size:var(--xl);font-weight:700}
 .pg-sub{font-size:var(--sm);color:var(--muted);margin-top:3px}
+
+/* ── CARDS ── */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-2xl);padding:var(--s5);box-shadow:var(--sh-sm)}
 .card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--s4)}
 .card-t{font-family:var(--font-d);font-size:var(--base);font-weight:600}
 .card-sub{font-size:var(--xs);color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+
+/* ── BUTTONS ── */
 .btn{display:inline-flex;align-items:center;gap:var(--s2);padding:var(--s3) var(--s5);border-radius:var(--r-lg);
   font-size:var(--sm);font-weight:600;transition:background var(--trans),opacity var(--trans);border:1px solid transparent;cursor:pointer}
 .btn-primary{background:var(--primary);color:#fff}
@@ -93,6 +95,8 @@ h1,h2,h3,h4,h5{font-family:var(--font-d);line-height:1.2;text-wrap:balance}
 .btn-outline{border-color:var(--border);color:var(--text);background:var(--surface3)}
 .btn-sm{padding:var(--s2) var(--s4);font-size:var(--xs)}
 .btn-full{width:100%;justify-content:center}
+
+/* ── BADGES ── */
 .badge{display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:var(--r-full);font-size:10px;font-weight:700;letter-spacing:.02em;flex-shrink:0}
 .bo{background:var(--primary-hl);color:var(--primary)}
 .bg{background:var(--green-hl);color:var(--green)}
@@ -101,14 +105,20 @@ h1,h2,h3,h4,h5{font-family:var(--font-d);line-height:1.2;text-wrap:balance}
 .by{background:var(--yellow-hl);color:var(--yellow)}
 .bm{background:var(--faint);color:var(--muted)}
 .bp{background:var(--purple-hl);color:var(--purple)}
+
+/* ── INPUT ── */
 .inp{background:var(--surface3);border:1px solid var(--border);border-radius:var(--r-lg);
   padding:var(--s3) var(--s4);font-size:var(--sm);color:var(--text);width:100%;
   transition:border-color var(--trans)}
 .inp:focus{outline:none;border-color:var(--primary)}
 .inp::placeholder{color:var(--faint)}
 .inp-label{font-size:var(--xs);color:var(--muted);font-weight:600;margin-bottom:4px;display:block}
+
+/* ── FIELD GROUP ── */
 .frow{display:flex;gap:var(--s3);flex-wrap:wrap}
 .ffield{flex:1;min-width:130px;display:flex;flex-direction:column}
+
+/* ── TOGGLE ── */
 .tog-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);padding:var(--s3) 0;border-bottom:1px solid var(--divider)}
 .tog-row:last-child{border:none;padding-bottom:0}
 .tog-info h4{font-size:var(--sm);font-weight:600;margin-bottom:2px}
@@ -117,12 +127,16 @@ h1,h2,h3,h4,h5{font-family:var(--font-d);line-height:1.2;text-wrap:balance}
 .toggle::after{content:'';position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:transform var(--trans);box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .toggle.on{background:var(--primary)}
 .toggle.on::after{transform:translateX(19px)}
+
+/* ── KPI GRID ── */
 .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3)}
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);padding:var(--s4);display:flex;flex-direction:column;gap:var(--s2)}
 .kpi-v{font-family:var(--font-d);font-size:var(--xl);font-weight:700;font-variant-numeric:tabular-nums}
 .kpi-l{font-size:var(--xs);color:var(--muted);font-weight:500}
 .kpi-ch{font-size:var(--xs);font-weight:600;display:flex;align-items:center;gap:3px}
 .up{color:var(--green)}.dn{color:var(--red)}.na{color:var(--muted)}
+
+/* ── REMINDER ITEM ── */
 .rem-list{display:flex;flex-direction:column}
 .rem{display:flex;align-items:center;gap:var(--s3);padding:var(--s3) 0;border-bottom:1px solid var(--divider)}
 .rem:last-child{border:none;padding-bottom:0}
@@ -135,23 +149,31 @@ h1,h2,h3,h4,h5{font-family:var(--font-d);line-height:1.2;text-wrap:balance}
 .rem-body{flex:1;min-width:0}
 .rem-body h4{font-size:var(--sm);font-weight:600;margin-bottom:2px}
 .rem-body p{font-size:var(--xs);color:var(--muted)}
+
+/* ── HERO BANNER ── */
 .hero-banner{background:linear-gradient(135deg,var(--primary-hl),var(--surface3));border:1px solid var(--border);
   border-radius:var(--r-2xl);padding:var(--s5);display:flex;align-items:center;justify-content:space-between;gap:var(--s4)}
 .hero-text h2{font-size:var(--lg);font-weight:700;margin-bottom:4px}
 .hero-text p{font-size:var(--sm);color:var(--muted)}
 .hero-emo{font-size:3.5rem;flex-shrink:0;line-height:1}
+
+/* ── QUICK ACTIONS ── */
 .qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s3)}
 .qa{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);
   padding:var(--s4) var(--s2);display:flex;flex-direction:column;align-items:center;gap:var(--s2);cursor:pointer;transition:background var(--trans)}
 .qa:hover,.qa:active{background:var(--surface3)}
 .qa-icon{width:40px;height:40px;border-radius:var(--r-md);background:var(--primary-hl);color:var(--primary);display:flex;align-items:center;justify-content:center}
 .qa span{font-size:var(--xs);color:var(--muted);font-weight:500;text-align:center;line-height:1.3}
+
+/* ── MISC ── */
 .divider{height:1px;background:var(--divider);margin:var(--s1) 0}
 .section-label{font-size:var(--xs);font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--s3)}
 .star-row{display:flex;gap:4px;margin-bottom:var(--s3)}
 .star-btn{font-size:1.6rem;cursor:pointer;transition:transform .1s;color:var(--faint)}
 .star-btn.on{color:var(--yellow)}
 .tag-list{display:flex;gap:var(--s2);flex-wrap:wrap;margin-top:var(--s2)}
+
+/* ── PARTNER CARD (КАТАЛОГ) ── */
 .search-wrap{position:relative}
 .search-wrap input{padding-left:2.6rem}
 .search-ico{position:absolute;left:var(--s4);top:50%;transform:translateY(-50%);color:var(--faint);pointer-events:none}
@@ -171,6 +193,8 @@ h1,h2,h3,h4,h5{font-family:var(--font-d);line-height:1.2;text-wrap:balance}
 .pcard-price{font-family:var(--font-d);font-weight:700;font-variant-numeric:tabular-nums;color:var(--primary);font-size:var(--sm)}
 .rating-row{display:flex;align-items:center;gap:3px;font-size:var(--xs);color:var(--muted)}
 .star{color:var(--yellow)}
+
+/* ── EXPENSE CHART (РАСХОДЫ) ── */
 .exp-chart{display:flex;align-items:flex-end;gap:4px;height:72px;padding:var(--s2) 0}
 .bar-w{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
 .bar{border-radius:var(--r-sm) var(--r-sm) 0 0;min-height:4px;width:100%;transition:height .5s cubic-bezier(.16,1,.3,1)}
@@ -184,6 +208,8 @@ h1,h2,h3,h4,h5{font-family:var(--font-d);line-height:1.2;text-wrap:balance}
 .exp-info h4{font-size:var(--sm);font-weight:600;margin-bottom:2px}
 .exp-info p{font-size:var(--xs);color:var(--muted)}
 .exp-amt{font-family:var(--font-d);font-size:var(--sm);font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0}
+
+/* ── RATINGS ── */
 .rtabs{display:flex;background:var(--surface3);border-radius:var(--r-xl);padding:3px;gap:2px}
 .rtab{flex:1;padding:var(--s2) var(--s3);border-radius:calc(var(--r-xl) - 3px);font-size:var(--xs);font-weight:600;cursor:pointer;text-align:center;color:var(--muted);transition:background var(--trans),color var(--trans)}
 .rtab.active{background:var(--surface2);color:var(--text);box-shadow:var(--sh-sm)}
@@ -194,6 +220,8 @@ h1,h2,h3,h4,h5{font-family:var(--font-d);line-height:1.2;text-wrap:balance}
 .rcard-info p{font-size:var(--xs);color:var(--muted);margin-bottom:var(--s2)}
 .rcard-score{font-family:var(--font-d);font-size:var(--xl);font-weight:700;text-align:right;flex-shrink:0;line-height:1}
 .rcard-count{font-size:var(--xs);color:var(--muted);text-align:right}
+
+/* ── CAR TRADE ── */
 .trade-hero{background:linear-gradient(135deg,var(--blue-hl),var(--surface3));border:1px solid var(--border);border-radius:var(--r-2xl);padding:var(--s5);margin-bottom:var(--s4)}
 .car-listing{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-2xl);overflow:hidden;cursor:pointer;transition:box-shadow var(--trans)}
 .car-listing:hover{box-shadow:var(--sh-md)}
@@ -204,6 +232,8 @@ h1,h2,h3,h4,h5{font-family:var(--font-d);line-height:1.2;text-wrap:balance}
 .car-listing-body p{font-size:var(--xs);color:var(--muted);margin-bottom:var(--s3)}
 .car-price{font-family:var(--font-d);font-size:var(--lg);font-weight:700;color:var(--primary);font-variant-numeric:tabular-nums}
 .car-specs{display:flex;gap:var(--s3);margin-top:var(--s2);flex-wrap:wrap}
+
+/* ── PROFILE & AUTH ── */
 .profile-ava-wrap{display:flex;flex-direction:column;align-items:center;gap:var(--s3);padding:var(--s5) 0}
 .profile-ava{width:80px;height:80px;border-radius:var(--r-full);background:var(--primary-hl);display:flex;align-items:center;justify-content:center;font-size:2.5rem;position:relative}
 .ava-edit{position:absolute;bottom:0;right:0;width:26px;height:26px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff}
