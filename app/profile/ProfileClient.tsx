@@ -8,7 +8,6 @@ import {
   Car, UserCircle2, PlusCircle, Trash2, CheckCircle2 
 } from 'lucide-react'
 
-// (Список ALL_CITIES остается без изменений)
 const ALL_CITIES = [
   "Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург", "Казань", 
   "Нижний Новгород", "Челябинск", "Самара", "Омск", "Ростов-на-Дону",
@@ -45,7 +44,19 @@ export default function ProfileClient() {
   const [user, setUser] = useState<any>(null)
   const [carPhotos, setCarPhotos] = useState<any[]>([])
 
-  const [userData, setUserData] = useState({
+  // ИСПРАВЛЕНО: Добавлены типы для userData, чтобы avatarUrl мог принимать строку
+  const [userData, setUserData] = useState<{
+    name: string;
+    city: string;
+    avatarUrl: string | null;
+    car: {
+      brand: string;
+      model: string;
+      year: string;
+      mileage: string;
+      engine_volume: string;
+    }
+  }>({
     name: 'Водитель',
     city: 'Не указан',
     avatarUrl: null,
@@ -54,7 +65,7 @@ export default function ProfileClient() {
       model: '—', 
       year: '—', 
       mileage: '0',
-      engine_volume: '' // Добавлено поле для объема
+      engine_volume: ''
     }
   })
 
@@ -75,7 +86,7 @@ export default function ProfileClient() {
             model: profile.car_model || '—',
             year: profile.car_year || '—',
             mileage: profile.car_mileage?.toString() || '0',
-            engine_volume: profile.engine_volume?.toString() || '' // Загружаем объем из базы
+            engine_volume: profile.engine_volume?.toString() || ''
           }
         })
       }
@@ -104,7 +115,6 @@ export default function ProfileClient() {
       car_brand: newData.car.brand,
       car_model: newData.car.model,
       car_year: parseInt(newData.car.year) || null,
-      // Сохраняем объем двигателя как число
       engine_volume: newData.car.engine_volume ? parseFloat(newData.car.engine_volume.toString().replace(',', '.')) : null,
       car_mileage: parseInt(newData.car.mileage) || 0,
       updated_at: new Date().toISOString()
@@ -141,6 +151,7 @@ export default function ProfileClient() {
       .eq('id', user.id);
 
     if (updateError) alert('Ошибка обновления: ' + updateError.message);
+    // ИСПРАВЛЕНО: Теперь TypeScript разрешает записывать сюда publicUrl (string)
     else setUserData(prev => ({ ...prev, avatarUrl: publicUrl }));
     setUploadingPhoto(false);
   }
@@ -256,7 +267,6 @@ export default function ProfileClient() {
               <div className="ffield" style={{flex: 1}}><label className="inp-label">Марка</label><input className="inp" value={userData.car.brand} onChange={e => setUserData({...userData, car: {...userData.car, brand: e.target.value}})} /></div>
               <div className="ffield" style={{flex: 1}}><label className="inp-label">Модель</label><input className="inp" value={userData.car.model} onChange={e => setUserData({...userData, car: {...userData.car, model: e.target.value}})} /></div>
             </div>
-            {/* ПОЛЕ ДЛЯ ОБЪЕМА ДВИГАТЕЛЯ */}
             <div className="ffield">
               <label className="inp-label">Объем двигателя (литры)</label>
               <input className="inp" type="text" placeholder="Напр. 2.0" value={userData.car.engine_volume} onChange={e => setUserData({...userData, car: {...userData.car, engine_volume: e.target.value}})} />
