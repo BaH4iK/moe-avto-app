@@ -21,7 +21,21 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
     { id: 'spare_parts', label: 'Запчасти', icon: <ShoppingBag size={18} />, color: '#2979ff', keywords: ['запчаст', 'деталь', 'фильтр', 'колодк', 'купил', 'магазин'] },
   ]
 
-  // ЛОГИКА ГОЛОСОВОГО ВВОДА (Web Speech API)
+  // ИСПРАВЛЕНО: Функция для превращения слов в числа для голосового ввода
+  const wordToNumber = (text: string) => {
+    const map: { [key: string]: string } = {
+      'один': '1', 'два': '2', 'три': '3', 'четыре': '4', 'пять': '5',
+      'шесть': '6', 'семь': '7', 'восемь': '8', 'девять': '9', 'ноль': '0',
+      'тыща': '000', 'тыщи': '000', 'тыщ': '000', 'тысяч': '000', 'пятьсот': '500'
+    };
+    let processed = text;
+    Object.keys(map).forEach(word => {
+      processed = processed.replace(new RegExp(word, 'g'), map[word]);
+    });
+    // Удаляем пробелы между цифрами (например, "5 000" -> "5000")
+    return processed.replace(/(\d)\s+(?=\d)/g, '$1');
+  }
+
   const startVoiceInput = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) return alert('Ваш браузер не поддерживает голосовой ввод')
@@ -34,16 +48,16 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
     recognition.onend = () => setIsListening(false)
 
     recognition.onresult = (event: any) => {
-      const text = event.results[0][0].transcript.toLowerCase()
+      let text = event.results[0][0].transcript.toLowerCase()
       console.log('Распознано:', text)
 
-      // 1. Ищем сумму (выцепляем цифры из текста)
-      const numbers = text.match(/\d+/g)
+      // ИСПРАВЛЕНО: Обрабатываем слова перед поиском суммы
+      const processedText = wordToNumber(text);
+      const numbers = processedText.match(/\d+/g)
       if (numbers) {
         setForm(prev => ({ ...prev, amount: numbers[0] }))
       }
 
-      // 2. Определяем категорию по ключевым словам
       const foundCategory = categories.find(cat => 
         cat.keywords.some(word => text.includes(word))
       )
@@ -51,7 +65,6 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
         setForm(prev => ({ ...prev, category: foundCategory.id }))
       }
 
-      // 3. Заполняем описание тем, что сказал юзер
       setForm(prev => ({ ...prev, description: text.charAt(0).toUpperCase() + text.slice(1) }))
     }
 
@@ -116,7 +129,6 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
           </button>
         </div>
 
-        {/* КНОПКА ГОЛОСОВОГО ВВОДА */}
         <button 
           type="button"
           onClick={startVoiceInput}

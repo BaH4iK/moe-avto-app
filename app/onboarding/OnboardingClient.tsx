@@ -20,7 +20,7 @@ export default function OnboardingClient() {
     car_model: '',
     car_year: '',
     car_mileage: '',
-    city: '', // Теперь пусто по умолчанию
+    city: '', 
     insurance_expiry: ''
   })
 
@@ -46,8 +46,8 @@ export default function OnboardingClient() {
       })
 
       if (!error) {
-        router.push('/dashboard')
-        router.refresh()
+        // ИСПРАВЛЕНО: Принудительная перезагрузка вместо router.push, чтобы избежать ошибки загрузки страницы
+        window.location.href = '/dashboard';
       } else {
         alert('Ошибка сохранения: ' + error.message)
       }
@@ -59,8 +59,8 @@ export default function OnboardingClient() {
     <main className="page active" style={{ 
       display: 'flex', 
       flexDirection: 'column', 
-      minHeight: '100dvh', // Динамическая высота для Safari
-      padding: '0 var(--s6) env(safe-area-inset-bottom)', // Учет безопасной зоны
+      minHeight: '100dvh',
+      padding: '0 var(--s6) env(safe-area-inset-bottom)',
       gap: 0 
     }}>
       
@@ -81,7 +81,7 @@ export default function OnboardingClient() {
         ))}
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px' }}>
         {step === 1 && (
           <div className="fade-in">
             <h1 className="pg-title" style={{ fontSize: '32px', marginBottom: 'var(--s2)' }}>Как вас зовут?</h1>
@@ -161,9 +161,10 @@ export default function OnboardingClient() {
       <div style={{ 
         display: 'flex', 
         gap: '12px', 
-        paddingBottom: 'var(--s8)', 
+        paddingBottom: 'calc(var(--s8) + env(safe-area-inset-bottom))', 
         paddingTop: 'var(--s4)',
-        background: 'var(--bg)' 
+        background: 'var(--bg)',
+        zIndex: 10
       }}>
         {step > 1 && (
           <button className="btn btn-outline" style={{ flex: 1, height: '56px' }} onClick={prevStep}>
