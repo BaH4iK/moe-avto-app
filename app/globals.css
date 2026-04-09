@@ -70,12 +70,11 @@ h1,h2,h3,h4,h5{font-family:var(--font-d);line-height:1.2;text-wrap:balance}
 /* ── PAGES ── */
 .page {
   display: none;
-  min-height: calc(100vh - 60px); /* Высота за вычетом хедера */
+  min-height: calc(100vh - 60px);
   padding: calc(56px + var(--s4)) var(--s4) var(--s4);
   max-width: 520px;
   margin: 0 auto;
   flex-direction: column;
-  overflow-x: hidden;
 }
 .page.active{display:flex;animation:fadeUp .22s cubic-bezier(.16,1,.3,1) both}
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
