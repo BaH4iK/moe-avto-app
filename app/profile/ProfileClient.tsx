@@ -44,7 +44,6 @@ export default function ProfileClient() {
   const [user, setUser] = useState<any>(null)
   const [carPhotos, setCarPhotos] = useState<any[]>([])
 
-  // ФИКС ТИПОВ: Явно указываем, что avatarUrl может быть string | null
   const [userData, setUserData] = useState<{
     name: string;
     city: string;
@@ -172,7 +171,8 @@ export default function ProfileClient() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    router.push('/auth')
+    // ИСПРАВЛЕНО: Принудительная перезагрузка для корректного выхода
+    window.location.href = '/auth';
   }
 
   if (loading && !saving) return <main className="page active" style={{display:'flex', alignItems:'center', justifyContent:'center'}}>Загрузка...</main>
@@ -300,5 +300,3 @@ export default function ProfileClient() {
     </main>
   )
 }
-
-// ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ ДЛЯ VERCEL: FIX TS TYPES 2026

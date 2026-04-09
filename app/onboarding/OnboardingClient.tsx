@@ -46,7 +46,6 @@ export default function OnboardingClient() {
       })
 
       if (!error) {
-        // ИСПРАВЛЕНО: Принудительная перезагрузка вместо router.push, чтобы избежать ошибки загрузки страницы
         window.location.href = '/dashboard';
       } else {
         alert('Ошибка сохранения: ' + error.message)
@@ -161,7 +160,8 @@ export default function OnboardingClient() {
       <div style={{ 
         display: 'flex', 
         gap: '12px', 
-        paddingBottom: 'calc(var(--s8) + env(safe-area-inset-bottom))', 
+        /* ИСПРАВЛЕНО: Подняли блок кнопок регистрации еще выше */
+        paddingBottom: 'calc(var(--s8) + 40px + env(safe-area-inset-bottom))', 
         paddingTop: 'var(--s4)',
         background: 'var(--bg)',
         zIndex: 10
