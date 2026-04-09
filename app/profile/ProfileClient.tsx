@@ -44,7 +44,7 @@ export default function ProfileClient() {
   const [user, setUser] = useState<any>(null)
   const [carPhotos, setCarPhotos] = useState<any[]>([])
 
-  // ИСПРАВЛЕНО: Добавлены типы для userData, чтобы avatarUrl мог принимать строку
+  // ФИКС ТИПОВ: Явно указываем, что avatarUrl может быть string | null
   const [userData, setUserData] = useState<{
     name: string;
     city: string;
@@ -69,12 +69,10 @@ export default function ProfileClient() {
     }
   })
 
-  // 1. Загрузка данных
   const loadProfileData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       setUser(user)
-      
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
       if (profile) {
         setUserData({
@@ -90,12 +88,7 @@ export default function ProfileClient() {
           }
         })
       }
-
-      const { data: photos } = await supabase
-        .from('car_photos')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true })
+      const { data: photos } = await supabase.from('car_photos').select('*').eq('user_id', user.id).order('created_at', { ascending: true })
       if (photos) setCarPhotos(photos)
     }
     setLoading(false)
@@ -105,7 +98,6 @@ export default function ProfileClient() {
     loadProfileData()
   }, [loadProfileData])
 
-  // 2. Функция сохранения профиля
   const updateProfile = async (newData: any) => {
     if (!user) return
     setSaving(true)
@@ -119,12 +111,10 @@ export default function ProfileClient() {
       car_mileage: parseInt(newData.car.mileage) || 0,
       updated_at: new Date().toISOString()
     })
-    
-    if (error) alert('Ошибка МоёАВТО: ' + error.message)
+    if (error) alert('Ошибка: ' + error.message)
     setSaving(false)
   }
 
-  // 3. Загрузка ЛИЧНОГО аватара
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0 || !user) return;
     setUploadingPhoto(true);
@@ -132,31 +122,21 @@ export default function ProfileClient() {
     const fileExt = file.name.split('.').pop();
     const filePath = `${user.id}/${Date.now()}.${fileExt}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, file);
-
+    const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
     if (uploadError) {
       alert('Ошибка загрузки: ' + uploadError.message);
       setUploadingPhoto(false);
       return;
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(filePath);
-
-    const { error: updateError } = await supabase.from('profiles')
-      .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
-      .eq('id', user.id);
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+    const { error: updateError } = await supabase.from('profiles').update({ avatar_url: publicUrl, updated_at: new Date().toISOString() }).eq('id', user.id);
 
     if (updateError) alert('Ошибка обновления: ' + updateError.message);
-    // ИСПРАВЛЕНО: Теперь TypeScript разрешает записывать сюда publicUrl (string)
     else setUserData(prev => ({ ...prev, avatarUrl: publicUrl }));
     setUploadingPhoto(false);
   }
 
-  // 4. Загрузка фото МАШИНЫ
   const handleCarPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0 || !user) return;
     setUploadingPhoto(true);
@@ -164,22 +144,15 @@ export default function ProfileClient() {
     const fileExt = file.name.split('.').pop();
     const filePath = `${user.id}/${Date.now()}.${fileExt}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('car-photos')
-      .upload(filePath, file);
-
+    const { error: uploadError } = await supabase.storage.from('car-photos').upload(filePath, file);
     if (uploadError) {
       alert('Ошибка загрузки: ' + uploadError.message);
       setUploadingPhoto(false);
       return;
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('car-photos')
-      .getPublicUrl(filePath);
-
-    const { error: insertError } = await supabase.from('car_photos')
-      .insert({ user_id: user.id, photo_url: publicUrl });
+    const { data: { publicUrl } } = supabase.storage.from('car-photos').getPublicUrl(filePath);
+    const { error: insertError } = await supabase.from('car_photos').insert({ user_id: user.id, photo_url: publicUrl });
 
     if (insertError) alert('Ошибка сохранения: ' + insertError.message);
     else setCarPhotos(prev => [...prev, { photo_url: publicUrl, created_at: new Date().toISOString() }]);
@@ -202,7 +175,7 @@ export default function ProfileClient() {
     router.push('/auth')
   }
 
-  if (loading && !saving) return <main className="page active" style={{display:'flex', alignItems:'center', justifyContent:'center'}}>Загрузка МоёАВТО...</main>
+  if (loading && !saving) return <main className="page active" style={{display:'flex', alignItems:'center', justifyContent:'center'}}>Загрузка...</main>
 
   return (
     <main className="page active" style={{ paddingBottom: '100px' }}>
@@ -253,7 +226,7 @@ export default function ProfileClient() {
         </label>
         
         <h2 style={{marginTop:'var(--s3)', fontSize:'20px'}}>{userData.name}</h2>
-        <p className="pg-sub">Севастополь · ID: {user?.id.slice(0,8)}</p>
+        <p className="pg-sub">ID: {user?.id.slice(0,8)}</p>
       </div>
 
       <div className="card">
@@ -271,7 +244,7 @@ export default function ProfileClient() {
               <label className="inp-label">Объем двигателя (литры)</label>
               <input className="inp" type="text" placeholder="Напр. 2.0" value={userData.car.engine_volume} onChange={e => setUserData({...userData, car: {...userData.car, engine_volume: e.target.value}})} />
             </div>
-            <button className="btn btn-primary btn-full" onClick={() => { setIsEditingCar(false); updateProfile(userData); }} disabled={saving}>Сохранить в МоёАВТО</button>
+            <button className="btn btn-primary btn-full" onClick={() => { setIsEditingCar(false); updateProfile(userData); }} disabled={saving}>Сохранить</button>
           </div>
         ) : (
           <div className="car-mini active" style={{display:'flex', alignItems:'center', gap:'12px'}}>
@@ -286,25 +259,20 @@ export default function ProfileClient() {
 
       <div className="card" style={{marginTop:'var(--s4)'}}>
         <div className="card-h">
-          <span className="card-t">Галерея автомобиля</span>
+          <span className="card-t">Галерея</span>
           <span className="pg-sub">{carPhotos.length} / 10</span>
         </div>
-        
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginTop: 'var(--s2)' }}>
           {carPhotos.map(photo => (
             <div key={photo.id} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--divider)' }}>
-              <img src={photo.photo_url} alt="Фото машины" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <button 
-                onClick={() => deleteCarPhoto(photo.id, photo.photo_url)}
-                style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%', color: 'var(--red)', padding: '4px', cursor: 'pointer' }}
-              >
+              <img src={photo.photo_url} alt="Машина" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <button onClick={() => deleteCarPhoto(photo.id, photo.photo_url)} style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%', color: 'var(--red)', padding: '4px' }}>
                 <Trash2 size={12}/>
               </button>
             </div>
           ))}
-
           {carPhotos.length < 10 && (
-            <label htmlFor="car-photo-upload" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', aspectRatio: '1/1', borderRadius: '12px', border: '1px dashed var(--divider)', color: 'var(--primary)', cursor: 'pointer', background: 'var(--surface)' }}>
+            <label htmlFor="car-photo-upload" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', aspectRatio: '1/1', borderRadius: '12px', border: '1px dashed var(--divider)', color: 'var(--primary)', cursor: 'pointer' }}>
               {uploadingPhoto ? <Loader2 className="animate-spin"/> : <PlusCircle size={24}/>}
               <input id="car-photo-upload" type="file" accept="image/*" onChange={handleCarPhotoUpload} style={{display:'none'}} disabled={uploadingPhoto} />
             </label>
@@ -324,21 +292,13 @@ export default function ProfileClient() {
           </div>
           <ChevronRight size={18} className="c-muted" />
         </div>
-        <div className="tog-row" onClick={() => setNotifications(!notifications)} style={{ cursor: 'pointer', padding:'12px 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}>
-            <Bell size={18} className="c-muted" />
-            <div className="tog-info">
-              <h4>Уведомления</h4>
-              <p>{notifications ? 'Включены' : 'Выключены'}</p>
-            </div>
-          </div>
-          <div className={`toggle ${notifications ? 'on' : ''}`}></div>
-        </div>
       </div>
 
       <button className="btn btn-outline btn-full" onClick={handleLogout} style={{ color: 'var(--red)', borderColor: 'rgba(255,75,75,0.2)', height: '54px', marginTop: 'var(--s6)' }}>
-        <LogOut size={18} /> Выйти из МоёАВТО
+        <LogOut size={18} /> Выйти
       </button>
     </main>
   )
 }
+
+// ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ ДЛЯ VERCEL: FIX TS TYPES 2026
