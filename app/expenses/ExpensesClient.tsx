@@ -15,7 +15,6 @@ export default function ExpensesClient() {
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState('Все')
 
-  // Загрузка реальных данных
   const fetchExpenses = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
@@ -34,7 +33,6 @@ export default function ExpensesClient() {
     fetchExpenses()
   }, [fetchExpenses])
 
-  // МГНОВЕННОЕ ОБНОВЛЕНИЕ ИНТЕРФЕЙСА
   const handleOptimisticAdd = (newExpense: any) => {
     setHistory(prev => [{
       ...newExpense,
@@ -65,7 +63,6 @@ export default function ExpensesClient() {
 
   const totalAmount = history.reduce((acc, curr) => acc + Number(curr.amount), 0)
 
-  // Пока идет загрузка, возвращаем null, чтобы работал глобальный PageLoader
   if (loading && history.length === 0) return null
 
   return (
@@ -75,7 +72,8 @@ export default function ExpensesClient() {
         <p className="pg-sub">Общие затраты: <strong>{totalAmount.toLocaleString()} ₽</strong></p>
       </div>
 
-      <div className="chips" style={{ marginBottom: 'var(--s4)', overflowX: 'auto', paddingBottom: '4px' }}>
+      {/* ИСПРАВЛЕНО: Категории теперь оборачиваются на новую строку (flex-wrap: wrap) */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: 'var(--s4)', flexWrap: 'wrap' }}>
         {['Все', 'Топливо', 'Сервис', 'Запчасти', 'Штрафы'].map(f => (
           <div key={f} className={`chip ${activeFilter === f ? 'active' : ''}`} onClick={() => setActiveFilter(f)}>{f}</div>
         ))}

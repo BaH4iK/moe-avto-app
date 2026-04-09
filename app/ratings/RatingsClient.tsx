@@ -25,7 +25,7 @@ export default function RatingsClient() {
   const [activeTab, setActiveTab] = useState('Сервисы')
 
   return (
-    <main className="page active">
+    <main className="page active" style={{ paddingBottom: 'calc(120px + env(safe-area-inset-bottom))' }}>
       <div className="pg-head">
         <h1 className="pg-title">Народный рейтинг</h1>
         <p className="pg-sub">На основе 15 000 оценок жителей Севастополя</p>
@@ -45,7 +45,7 @@ export default function RatingsClient() {
       </div>
 
       {/* ── ЛИДЕР МЕСЯЦА (ГЕРОЙ-КАРТОЧКА) ── */}
-      <div className="card" style={{ background: 'linear-gradient(135deg, var(--yellow-hl), var(--surface2))', borderColor: 'var(--yellow)' }}>
+      <div className="card" style={{ background: 'linear-gradient(135deg, var(--yellow-hl), var(--surface2))', borderColor: 'var(--yellow)', marginTop: 'var(--s4)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s4)' }}>
           <div className="rem-ico y" style={{ width: 56, height: 56 }}>
             <Trophy size={28} />
@@ -58,7 +58,7 @@ export default function RatingsClient() {
         </div>
       </div>
 
-      <p className="section-label">Топ по категории {activeTab.toLowerCase()}</p>
+      <p className="section-label" style={{ marginTop: 'var(--s4)' }}>Топ по категории {activeTab.toLowerCase()}</p>
 
       {/* ── СПИСОК РЕЙТИНГА ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s3)' }}>
@@ -81,7 +81,7 @@ export default function RatingsClient() {
       </div>
 
       {/* ── ИНФО-БЛОК ── */}
-      <div className="card" style={{ marginTop: 'var(--s2)', borderStyle: 'dashed' }}>
+      <div className="card" style={{ marginTop: 'var(--s4)', borderStyle: 'dashed' }}>
         <div style={{ display: 'flex', gap: 'var(--s3)', alignItems: 'center' }}>
           <TrendingUp size={20} style={{ color: 'var(--primary)' }} />
           <p style={{ fontSize: 'var(--xs)', color: 'var(--muted)', lineHeight: 1.4 }}>

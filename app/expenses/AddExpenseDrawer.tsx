@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { X, Fuel, Wrench, AlertCircle, ShoppingBag, Mic, MicOff, Loader2 } from 'lucide-react'
+import { X, Fuel, Wrench, AlertCircle, ShoppingBag, Mic, MicOff } from 'lucide-react'
 
 export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: any) {
   const supabase = createClient()
@@ -21,19 +21,40 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
     { id: 'spare_parts', label: 'Запчасти', icon: <ShoppingBag size={18} />, color: '#2979ff', keywords: ['запчаст', 'деталь', 'фильтр', 'колодк', 'купил', 'магазин'] },
   ]
 
-  // ИСПРАВЛЕНО: Функция для превращения слов в числа для голосового ввода
-  const wordToNumber = (text: string) => {
-    const map: { [key: string]: string } = {
-      'один': '1', 'два': '2', 'три': '3', 'четыре': '4', 'пять': '5',
-      'шесть': '6', 'семь': '7', 'восемь': '8', 'девять': '9', 'ноль': '0',
-      'тыща': '000', 'тыщи': '000', 'тыщ': '000', 'тысяч': '000', 'пятьсот': '500'
+  // ИСПРАВЛЕНО: Умный парсинг для сленга и любых чисел
+  const processVoiceText = (text: string) => {
+    let processed = text.toLowerCase();
+    
+    // 1. Сленг
+    processed = processed.replace(/полторы\s*(тысяч|тысячи|тыщи|тыщ|к|k)?/g, '1500');
+    processed = processed.replace(/полторушк[ауи]/g, '1500');
+    processed = processed.replace(/двушк[ауи]/g, '2000');
+    processed = processed.replace(/трешк[ауи]/g, '3000');
+    processed = processed.replace(/косар[ьяю]?/g, '1000');
+    processed = processed.replace(/пятер[ау]/g, '5000');
+    processed = processed.replace(/пятихатк[ау]/g, '500');
+    processed = processed.replace(/сотк[ау]/g, '100');
+
+    // 2. Текстовые числа в цифры
+    const numMap: { [key: string]: string } = {
+      'ноль': '0', 'одна': '1', 'один': '1', 'две': '2', 'два': '2', 
+      'три': '3', 'четыре': '4', 'пять': '5', 'шесть': '6', 'семь': '7', 
+      'восемь': '8', 'девять': '9', 'десять': '10'
     };
-    let processed = text;
-    Object.keys(map).forEach(word => {
-      processed = processed.replace(new RegExp(word, 'g'), map[word]);
+    Object.keys(numMap).forEach(key => {
+      processed = processed.replace(new RegExp(`\\b${key}\\b`, 'g'), numMap[key]);
     });
-    // Удаляем пробелы между цифрами (например, "5 000" -> "5000")
-    return processed.replace(/(\d)\s+(?=\d)/g, '$1');
+
+    // 3. Обработка множителей тысяч (например, "5 тысяч", "4 к", "3 тыщи")
+    processed = processed.replace(/(\d+)\s*(к|k|тысяч|тысячи|тысячу|тыщ|тыща|тыщу|тыщи)\b/g, '$1000');
+    
+    // 4. Одиночная тысяча (например, "заправил тысячу")
+    processed = processed.replace(/\b(тысяча|тысячу|тыщу|тыща)\b/g, '1000');
+
+    // 5. Убираем пробелы между цифрами ("5 000" -> "5000")
+    processed = processed.replace(/(\d)\s+(?=\d)/g, '$1');
+
+    return processed;
   }
 
   const startVoiceInput = () => {
@@ -49,11 +70,10 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
 
     recognition.onresult = (event: any) => {
       let text = event.results[0][0].transcript.toLowerCase()
-      console.log('Распознано:', text)
-
-      // ИСПРАВЛЕНО: Обрабатываем слова перед поиском суммы
-      const processedText = wordToNumber(text);
-      const numbers = processedText.match(/\d+/g)
+      
+      const processedText = processVoiceText(text);
+      const numbers = processedText.match(/\d+/g);
+      
       if (numbers) {
         setForm(prev => ({ ...prev, amount: numbers[0] }))
       }
@@ -65,6 +85,7 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
         setForm(prev => ({ ...prev, category: foundCategory.id }))
       }
 
+      // Записываем оригинальный текст в описание (с большой буквы)
       setForm(prev => ({ ...prev, description: text.charAt(0).toUpperCase() + text.slice(1) }))
     }
 
@@ -110,17 +131,19 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
     <div 
       style={{ 
         position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', 
-        zIndex: 1000, display: 'flex', alignItems: 'flex-start',
-        justifyContent: 'center', backdropFilter: 'blur(4px)',
-        paddingTop: '100px', paddingBottom: '40px'
+        zIndex: 1000, display: 'flex', 
+        alignItems: 'flex-end', // ИСПРАВЛЕНО: Прижимаем к низу
+        justifyContent: 'center', backdropFilter: 'blur(4px)'
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
+      {/* ИСПРАВЛЕНО: Мобильная шторка на 100% ширины */}
       <div className="card" style={{ 
-        width: '92%', maxWidth: '480px', maxHeight: '85vh', 
-        overflowY: 'auto', borderRadius: '28px', padding: 'var(--s6)', 
-        background: 'var(--bg)', border: '1px solid var(--divider)',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
+        width: '100%', maxWidth: '520px', maxHeight: '90vh', 
+        overflowY: 'auto', borderRadius: '24px 24px 0 0', 
+        padding: 'var(--s6) var(--s6) calc(40px + env(safe-area-inset-bottom))', 
+        background: 'var(--bg)', borderTop: '1px solid var(--divider)',
+        boxShadow: '0 -10px 50px rgba(0,0,0,0.5)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s6)' }}>
           <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Новый расход</h2>

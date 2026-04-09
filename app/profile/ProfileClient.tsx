@@ -44,7 +44,6 @@ export default function ProfileClient() {
   const [user, setUser] = useState<any>(null)
   const [carPhotos, setCarPhotos] = useState<any[]>([])
 
-  // ФИКС ТИПОВ ДЛЯ VERCEL
   const [userData, setUserData] = useState<{
     name: string;
     city: string;
@@ -55,6 +54,7 @@ export default function ProfileClient() {
       year: string;
       mileage: string;
       engine_volume: string;
+      vin_code: string; // ДОБАВЛЕНО ПОЛЕ VIN
     }
   }>({
     name: 'Водитель',
@@ -65,7 +65,8 @@ export default function ProfileClient() {
       model: '—', 
       year: '—', 
       mileage: '0',
-      engine_volume: ''
+      engine_volume: '',
+      vin_code: ''
     }
   })
 
@@ -84,7 +85,8 @@ export default function ProfileClient() {
             model: profile.car_model || '—',
             year: profile.car_year || '—',
             mileage: profile.car_mileage?.toString() || '0',
-            engine_volume: profile.engine_volume?.toString() || ''
+            engine_volume: profile.engine_volume?.toString() || '',
+            vin_code: profile.vin_code || '' // ЗАГРУЗКА ИЗ БД
           }
         })
       }
@@ -109,6 +111,7 @@ export default function ProfileClient() {
       car_year: parseInt(newData.car.year) || null,
       engine_volume: newData.car.engine_volume ? parseFloat(newData.car.engine_volume.toString().replace(',', '.')) : null,
       car_mileage: parseInt(newData.car.mileage) || 0,
+      vin_code: newData.car.vin_code || null, // СОХРАНЕНИЕ В БД
       updated_at: new Date().toISOString()
     })
     if (error) alert('Ошибка: ' + error.message)
@@ -173,7 +176,6 @@ export default function ProfileClient() {
   const handleLogout = async () => {
     setLoading(true)
     await supabase.auth.signOut()
-    // ИСПРАВЛЕНО: Полная замена истории для предотвращения ошибки "Page couldn't load"
     window.location.replace('/auth')
   }
 
@@ -242,9 +244,16 @@ export default function ProfileClient() {
               <div className="ffield" style={{flex: 1}}><label className="inp-label">Марка</label><input className="inp" value={userData.car.brand} onChange={e => setUserData({...userData, car: {...userData.car, brand: e.target.value}})} /></div>
               <div className="ffield" style={{flex: 1}}><label className="inp-label">Модель</label><input className="inp" value={userData.car.model} onChange={e => setUserData({...userData, car: {...userData.car, model: e.target.value}})} /></div>
             </div>
+            <div className="frow" style={{ gap: '10px' }}>
+              <div className="ffield" style={{flex: 1}}>
+                <label className="inp-label">Объем двигателя</label>
+                <input className="inp" type="text" placeholder="Напр. 2.0" value={userData.car.engine_volume} onChange={e => setUserData({...userData, car: {...userData.car, engine_volume: e.target.value}})} />
+              </div>
+            </div>
+            {/* НОВОЕ ПОЛЕ ДЛЯ VIN КОДА */}
             <div className="ffield">
-              <label className="inp-label">Объем двигателя (литры)</label>
-              <input className="inp" type="text" placeholder="Напр. 2.0" value={userData.car.engine_volume} onChange={e => setUserData({...userData, car: {...userData.car, engine_volume: e.target.value}})} />
+              <label className="inp-label">VIN-код</label>
+              <input className="inp" type="text" placeholder="XTA..." value={userData.car.vin_code} onChange={e => setUserData({...userData, car: {...userData.car, vin_code: e.target.value.toUpperCase()}})} style={{ textTransform: 'uppercase' }} />
             </div>
             <button className="btn btn-primary btn-full" onClick={() => { setIsEditingCar(false); updateProfile(userData); }} disabled={saving}>Сохранить</button>
           </div>
@@ -254,6 +263,8 @@ export default function ProfileClient() {
             <div style={{flex:1}}>
               <h4>{userData.car.brand} {userData.car.model} {userData.car.engine_volume ? `(${userData.car.engine_volume}л)` : ''}</h4>
               <p className="pg-sub">{userData.car.year} г.в. · {userData.car.mileage} км</p>
+              {/* ОТОБРАЖЕНИЕ VIN КОДА */}
+              {userData.car.vin_code && <p style={{ fontSize: '10px', color: 'var(--primary)', marginTop: '4px', letterSpacing: '0.05em', fontWeight: 600 }}>VIN: {userData.car.vin_code}</p>}
             </div>
           </div>
         )}
@@ -302,5 +313,3 @@ export default function ProfileClient() {
     </main>
   )
 }
-
-// FORCE VERCEL DEPLOY: PROFILE CLIENT RECOVERY 2026

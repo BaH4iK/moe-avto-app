@@ -60,7 +60,8 @@ export default function RemindersPage() {
   if (loading) return <div className="page active" style={{display:'flex', justifyContent:'center', alignItems:'center'}}><Loader2 className="animate-spin" size={32} color="var(--primary)" /></div>
 
   return (
-    <main className="page active" style={{ paddingBottom: '100px' }}>
+    // Увеличен paddingBottom, чтобы контент прокручивался выше кнопки
+    <main className="page active" style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
       <div className="pg-head" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button onClick={() => router.back()} className="icon-btn" style={{background:'var(--surface)'}}>
           <ArrowLeft size={20}/>
@@ -150,7 +151,8 @@ export default function RemindersPage() {
         </div>
       </div>
 
-      <div style={{ position: 'fixed', bottom: 100, left: 20, right: 20 }}>
+      {/* Кнопка опущена до 80px над нижним краем, чтобы не перекрывать центр */}
+      <div style={{ position: 'fixed', bottom: 'calc(80px + env(safe-area-inset-bottom))', left: 'var(--s4)', right: 'var(--s4)' }}>
         <button 
           className="btn btn-primary btn-full" 
           onClick={handleSave}
