@@ -68,11 +68,19 @@ h1,h2,h3,h4,h5{font-family:var(--font-d);line-height:1.2;text-wrap:balance}
 .bni.active .bni-icon{background:var(--primary-hl)}
 
 /* ── PAGES ── */
-.page{display:none;min-height:calc(100dvh - 56px - 54px - env(safe-area-inset-bottom,0px));
-  /* ИСПРАВЛЕНО: Увеличен отступ до 180px, чтобы кнопки всегда всплывали над меню */
-  padding:calc(56px + var(--s4)) var(--s4) calc(180px + var(--safe-b) + var(--s4));
-  max-width:520px;margin:0 auto;flex-direction:column;gap:var(--s4);
-  overflow-y: auto; -webkit-overflow-scrolling: touch;}
+.page {
+  display: none;
+  /* Устанавливаем высоту во весь экран iPhone */
+  min-height: 100dvh; 
+  /* Оставляем 180px снизу, чтобы контент можно было прокрутить ВЫШЕ кнопок */
+  padding: calc(56px + var(--s4)) var(--s4) calc(180px + var(--safe-b));
+  max-width: 520px;
+  margin: 0 auto;
+  flex-direction: column;
+  gap: var(--s4);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .page.active{display:flex;animation:fadeUp .22s cubic-bezier(.16,1,.3,1) both}
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .pg-head{margin-bottom:var(--s1)}
