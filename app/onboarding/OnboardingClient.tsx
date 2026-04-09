@@ -15,12 +15,12 @@ export default function OnboardingClient() {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
-    name: '', // Новое поле для имени
+    name: '', 
     car_brand: '',
     car_model: '',
     car_year: '',
     car_mileage: '',
-    city: 'Севастополь',
+    city: '', // Теперь пусто по умолчанию
     insurance_expiry: ''
   })
 
@@ -34,12 +34,12 @@ export default function OnboardingClient() {
     if (user) {
       const { error } = await supabase.from('profiles').upsert({
         id: user.id,
-        full_name: formData.name, // Сохраняем имя
+        full_name: formData.name,
         car_brand: formData.car_brand,
         car_model: formData.car_model,
         car_year: formData.car_year,
         car_mileage: parseInt(formData.car_mileage) || 0,
-        city: formData.city,
+        city: formData.city || 'Севастополь',
         insurance_expiry: formData.insurance_expiry,
         onboarded: true,
         updated_at: new Date().toISOString()
@@ -56,10 +56,20 @@ export default function OnboardingClient() {
   }
 
   return (
-    <main className="page active" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', padding: 'var(--s8) var(--s6)' }}>
+    <main className="page active" style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      minHeight: '100dvh', // Динамическая высота для Safari
+      padding: '0 var(--s6) env(safe-area-inset-bottom)', // Учет безопасной зоны
+      gap: 0 
+    }}>
       
-      {/* ИНДИКАТОР ШАГОВ */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: 'var(--s8)' }}>
+      <div style={{ 
+        display: 'flex', 
+        gap: '8px', 
+        paddingTop: 'calc(var(--s8) + env(safe-area-inset-top))', 
+        marginBottom: 'var(--s8)' 
+      }}>
         {[1, 2, 3, 4].map(s => (
           <div key={s} style={{ 
             height: '4px', 
@@ -71,8 +81,7 @@ export default function OnboardingClient() {
         ))}
       </div>
 
-      <div style={{ flex: 1 }}>
-        {/* ШАГ 1: ИМЯ */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
         {step === 1 && (
           <div className="fade-in">
             <h1 className="pg-title" style={{ fontSize: '32px', marginBottom: 'var(--s2)' }}>Как вас зовут?</h1>
@@ -95,7 +104,6 @@ export default function OnboardingClient() {
           </div>
         )}
 
-        {/* ШАГ 2: АВТОМОБИЛЬ */}
         {step === 2 && (
           <div className="fade-in">
             <h1 className="pg-title" style={{ fontSize: '32px' }}>Ваш автомобиль</h1>
@@ -114,7 +122,6 @@ export default function OnboardingClient() {
           </div>
         )}
 
-        {/* ШАГ 3: ПРОБЕГ И ГОРОД */}
         {step === 3 && (
           <div className="fade-in">
             <h1 className="pg-title" style={{ fontSize: '32px' }}>Детали</h1>
@@ -127,13 +134,12 @@ export default function OnboardingClient() {
               </div>
               <div className="ffield">
                 <label className="inp-label">Ваш город</label>
-                <input className="inp" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} />
+                <input className="inp" placeholder="Севастополь" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} />
               </div>
             </div>
           </div>
         )}
 
-        {/* ШАГ 4: СТРАХОВКА */}
         {step === 4 && (
           <div className="fade-in">
             <h1 className="pg-title" style={{ fontSize: '32px' }}>Почти готово!</h1>
@@ -152,8 +158,13 @@ export default function OnboardingClient() {
         )}
       </div>
 
-      {/* КНОПКИ НАВИГАЦИИ */}
-      <div style={{ display: 'flex', gap: '12px', marginTop: 'var(--s8)' }}>
+      <div style={{ 
+        display: 'flex', 
+        gap: '12px', 
+        paddingBottom: 'var(--s8)', 
+        paddingTop: 'var(--s4)',
+        background: 'var(--bg)' 
+      }}>
         {step > 1 && (
           <button className="btn btn-outline" style={{ flex: 1, height: '56px' }} onClick={prevStep}>
             <ArrowLeft size={18} />
@@ -165,7 +176,7 @@ export default function OnboardingClient() {
             className="btn btn-primary" 
             style={{ flex: 3, height: '56px' }} 
             onClick={nextStep}
-            disabled={step === 1 && !formData.name} // Не пускаем без имени
+            disabled={step === 1 && !formData.name}
           >
             Далее <ChevronRight size={18} />
           </button>
