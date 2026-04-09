@@ -40,13 +40,11 @@ export default function OnboardingClient() {
         car_year: formData.car_year,
         car_mileage: parseInt(formData.car_mileage) || 0,
         city: formData.city || 'Севастополь',
-        insurance_expiry: formData.insurance_expiry,
         onboarded: true,
         updated_at: new Date().toISOString()
       })
 
       if (!error) {
-        // Принудительный редирект для исключения ошибки "This page couldn't load"
         window.location.replace('/dashboard')
       } else {
         alert('Ошибка сохранения: ' + error.message)
@@ -59,11 +57,13 @@ export default function OnboardingClient() {
     <main className="page active" style={{ 
       display: 'flex', 
       flexDirection: 'column', 
-      minHeight: '100dvh',
+      height: '100dvh', // Фиксированная высота во весь экран
       padding: '0 var(--s6) env(safe-area-inset-bottom)',
-      gap: 0 
+      position: 'relative',
+      overflow: 'hidden' // Запрещаем общий скролл страницы
     }}>
       
+      {/* Прогресс-бар */}
       <div style={{ 
         display: 'flex', 
         gap: '8px', 
@@ -81,7 +81,8 @@ export default function OnboardingClient() {
         ))}
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px' }}>
+      {/* Контент шагов (скроллится только он) */}
+      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '120px' }}>
         {step === 1 && (
           <div className="fade-in">
             <h1 className="pg-title" style={{ fontSize: '32px', marginBottom: 'var(--s2)' }}>Как вас зовут?</h1>
@@ -108,16 +109,9 @@ export default function OnboardingClient() {
           <div className="fade-in">
             <h1 className="pg-title" style={{ fontSize: '32px' }}>Ваш автомобиль</h1>
             <p className="pg-sub" style={{ marginBottom: 'var(--s8)' }}>Настроим сервис под вашу машину</p>
-            
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s4)' }}>
-              <div className="ffield">
-                <label className="inp-label">Марка</label>
-                <input className="inp" placeholder="Напр. Geely" value={formData.car_brand} onChange={e => setFormData({...formData, car_brand: e.target.value})} />
-              </div>
-              <div className="ffield">
-                <label className="inp-label">Модель</label>
-                <input className="inp" placeholder="Напр. Monjaro" value={formData.car_model} onChange={e => setFormData({...formData, car_model: e.target.value})} />
-              </div>
+              <div className="ffield"><input className="inp" placeholder="Марка" value={formData.car_brand} onChange={e => setFormData({...formData, car_brand: e.target.value})} /></div>
+              <div className="ffield"><input className="inp" placeholder="Модель" value={formData.car_model} onChange={e => setFormData({...formData, car_model: e.target.value})} /></div>
             </div>
           </div>
         )}
@@ -125,17 +119,9 @@ export default function OnboardingClient() {
         {step === 3 && (
           <div className="fade-in">
             <h1 className="pg-title" style={{ fontSize: '32px' }}>Детали</h1>
-            <p className="pg-sub" style={{ marginBottom: 'var(--s8)' }}>Это нужно для расчета ТО и поиска мастеров</p>
-            
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s4)' }}>
-              <div className="ffield">
-                <label className="inp-label">Текущий пробег (км)</label>
-                <input className="inp" type="number" placeholder="18500" value={formData.car_mileage} onChange={e => setFormData({...formData, car_mileage: e.target.value})} />
-              </div>
-              <div className="ffield">
-                <label className="inp-label">Ваш город</label>
-                <input className="inp" placeholder="Севастополь" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} />
-              </div>
+              <div className="ffield"><input className="inp" type="number" placeholder="Пробег" value={formData.car_mileage} onChange={e => setFormData({...formData, car_mileage: e.target.value})} /></div>
+              <div className="ffield"><input className="inp" placeholder="Ваш город" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} /></div>
             </div>
           </div>
         )}
@@ -143,54 +129,43 @@ export default function OnboardingClient() {
         {step === 4 && (
           <div className="fade-in">
             <h1 className="pg-title" style={{ fontSize: '32px' }}>Почти готово!</h1>
-            <p className="pg-sub" style={{ marginBottom: 'var(--s8)' }}>Когда заканчивается ваша страховка?</p>
-            
             <div className="ffield">
               <label className="inp-label">Дата окончания ОСАГО</label>
-              <input 
-                className="inp" 
-                type="date" 
-                value={formData.insurance_expiry} 
-                onChange={e => setFormData({...formData, insurance_expiry: e.target.value})} 
-              />
+              <input className="inp" type="date" value={formData.insurance_expiry} onChange={e => setFormData({...formData, insurance_expiry: e.target.value})} />
             </div>
           </div>
         )}
       </div>
 
+      {/* ФИКСИРОВАННЫЕ КНОПКИ (как на скрине №2) */}
       <div style={{ 
+        position: 'fixed',
+        bottom: 'calc(20px + env(safe-area-inset-bottom))', 
+        left: 'var(--s6)',
+        right: 'var(--s6)',
         display: 'flex', 
         gap: '12px', 
-        paddingBottom: 'calc(var(--s8) + 60px + env(safe-area-inset-bottom))', 
-        paddingTop: 'var(--s4)',
-        background: 'var(--bg)',
-        zIndex: 10
+        zIndex: 1000
       }}>
         {step > 1 && (
-          <button className="btn btn-outline" style={{ flex: 1, height: '56px' }} onClick={prevStep}>
+          <button className="btn btn-outline" style={{ flex: 1, height: '56px', borderRadius: '16px' }} onClick={prevStep}>
             <ArrowLeft size={18} />
           </button>
         )}
-        
-        {step < 4 ? (
-          <button 
-            className="btn btn-primary" 
-            style={{ flex: 3, height: '56px' }} 
-            onClick={nextStep}
-            disabled={step === 1 && !formData.name}
-          >
-            Далее <ChevronRight size={18} />
-          </button>
-        ) : (
-          <button 
-            className="btn btn-primary" 
-            style={{ flex: 3, height: '56px' }} 
-            onClick={handleFinish}
-            disabled={loading}
-          >
-            {loading ? <Loader2 className="animate-spin" /> : 'Начать пользоваться'}
-          </button>
-        )}
+        <button 
+          className="btn btn-primary" 
+          style={{ 
+            flex: 3, 
+            height: '56px', 
+            borderRadius: '16px', 
+            boxShadow: '0 8px 30px rgba(255,122,32,0.3)',
+            fontWeight: 700 
+          }} 
+          onClick={step === 4 ? handleFinish : nextStep}
+          disabled={step === 1 && !formData.name}
+        >
+          {step === 4 ? (loading ? <Loader2 className="animate-spin" /> : 'Начать пользоваться') : <>Далее <ChevronRight size={18} /></>}
+        </button>
       </div>
     </main>
   )
