@@ -54,7 +54,7 @@ export default function ProfileClient() {
       year: string;
       mileage: string;
       engine_volume: string;
-      vin_code: string; // ДОБАВЛЕНО ПОЛЕ VIN
+      vin_code: string;
     }
   }>({
     name: 'Водитель',
@@ -70,28 +70,36 @@ export default function ProfileClient() {
     }
   })
 
+  // Ускоренная параллельная загрузка
   const loadProfileData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       setUser(user)
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      if (profile) {
+      
+      const [profileRes, photosRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        supabase.from('car_photos').select('*').eq('user_id', user.id).order('created_at', { ascending: true })
+      ])
+      
+      if (profileRes.data) {
         setUserData({
-          name: profile.full_name || 'Водитель',
-          city: profile.city || 'Севастополь',
-          avatarUrl: profile.avatar_url || null,
+          name: profileRes.data.full_name || 'Водитель',
+          city: profileRes.data.city || 'Севастополь',
+          avatarUrl: profileRes.data.avatar_url || null,
           car: {
-            brand: profile.car_brand || '—',
-            model: profile.car_model || '—',
-            year: profile.car_year || '—',
-            mileage: profile.car_mileage?.toString() || '0',
-            engine_volume: profile.engine_volume?.toString() || '',
-            vin_code: profile.vin_code || '' // ЗАГРУЗКА ИЗ БД
+            brand: profileRes.data.car_brand || '—',
+            model: profileRes.data.car_model || '—',
+            year: profileRes.data.car_year?.toString() || '—',
+            mileage: profileRes.data.car_mileage?.toString() || '0',
+            engine_volume: profileRes.data.engine_volume?.toString() || '',
+            vin_code: profileRes.data.vin_code || ''
           }
         })
       }
-      const { data: photos } = await supabase.from('car_photos').select('*').eq('user_id', user.id).order('created_at', { ascending: true })
-      if (photos) setCarPhotos(photos)
+      
+      if (photosRes.data) {
+        setCarPhotos(photosRes.data)
+      }
     }
     setLoading(false)
   }, [supabase])
@@ -111,7 +119,7 @@ export default function ProfileClient() {
       car_year: parseInt(newData.car.year) || null,
       engine_volume: newData.car.engine_volume ? parseFloat(newData.car.engine_volume.toString().replace(',', '.')) : null,
       car_mileage: parseInt(newData.car.mileage) || 0,
-      vin_code: newData.car.vin_code || null, // СОХРАНЕНИЕ В БД
+      vin_code: newData.car.vin_code || null,
       updated_at: new Date().toISOString()
     })
     if (error) alert('Ошибка: ' + error.message)
@@ -137,6 +145,7 @@ export default function ProfileClient() {
 
     if (updateError) alert('Ошибка обновления: ' + updateError.message);
     else setUserData(prev => ({ ...prev, avatarUrl: publicUrl }));
+    
     setUploadingPhoto(false);
   }
 
@@ -158,7 +167,8 @@ export default function ProfileClient() {
     const { error: insertError } = await supabase.from('car_photos').insert({ user_id: user.id, photo_url: publicUrl });
 
     if (insertError) alert('Ошибка сохранения: ' + insertError.message);
-    else setCarPhotos(prev => [...prev, { photo_url: publicUrl, created_at: new Date().toISOString() }]);
+    else setCarPhotos(prev => [...prev, { id: Date.now().toString(), photo_url: publicUrl, created_at: new Date().toISOString() }]);
+    
     setUploadingPhoto(false);
   }
 
@@ -179,10 +189,12 @@ export default function ProfileClient() {
     window.location.replace('/auth')
   }
 
-  if (loading && !saving) return <main className="page active" style={{display:'flex', alignItems:'center', justifyContent:'center'}}>Загрузка...</main>
+  if (loading && !saving) return <main className="page active" style={{display:'flex', alignItems:'center', justifyContent:'center'}}><Loader2 className="animate-spin" size={32} color="var(--primary)"/></main>
 
   return (
     <main className="page active" style={{ paddingBottom: '100px' }}>
+      
+      {/* МОДАЛКА ВЫБОРА ГОРОДА */}
       {showCityPicker && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', zIndex: 1000, display: 'flex', flexDirection: 'column' }}>
           <div className="page active" style={{ background: 'var(--bg)', marginTop: '40px', borderRadius: '24px 24px 0 0', flex: 1, display:'flex', flexDirection:'column' }}>
@@ -200,10 +212,12 @@ export default function ProfileClient() {
               {filteredCities.map(city => (
                 <div key={city} onClick={() => {
                     const updated = { ...userData, city };
-                    setUserData(updated); updateProfile(updated);
-                    setShowCityPicker(false); setSearchCity('');
+                    setUserData(updated); 
+                    updateProfile(updated);
+                    setShowCityPicker(false); 
+                    setSearchCity('');
                   }}
-                  style={{ padding: '18px 0', borderBottom: '1px solid var(--divider)', color: userData.city === city ? 'var(--primary)' : 'var(--text)', display:'flex', justifyContent:'space-between' }}>
+                  style={{ padding: '18px 0', borderBottom: '1px solid var(--divider)', color: userData.city === city ? 'var(--primary)' : 'var(--text)', display:'flex', justifyContent:'space-between', cursor: 'pointer' }}>
                   {city}
                   {userData.city === city && <CheckCircle2 size={18} />}
                 </div>
@@ -215,7 +229,7 @@ export default function ProfileClient() {
 
       <div className="pg-head">
         <h1 className="pg-title">Профиль</h1>
-        {uploadingPhoto && <span style={{fontSize:'10px', color:'var(--primary)'}}><Loader2 className="animate-spin" size={10}/> Обновление...</span>}
+        {uploadingPhoto && <span style={{fontSize:'10px', color:'var(--primary)'}}><Loader2 className="animate-spin" size={10} style={{display:'inline'}}/> Обновление...</span>}
       </div>
 
       <div className="profile-ava-wrap" style={{textAlign:'center', marginBottom:'var(--s6)'}}>
@@ -238,23 +252,42 @@ export default function ProfileClient() {
           <span className="card-t">Мой автомобиль</span>
           <button className="btn btn-ghost btn-sm" onClick={() => setIsEditingCar(!isEditingCar)}>{isEditingCar ? 'Отмена' : 'Изменить'}</button>
         </div>
+        
         {isEditingCar ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s3)' }}>
             <div className="frow" style={{ gap: '10px' }}>
-              <div className="ffield" style={{flex: 1}}><label className="inp-label">Марка</label><input className="inp" value={userData.car.brand} onChange={e => setUserData({...userData, car: {...userData.car, brand: e.target.value}})} /></div>
-              <div className="ffield" style={{flex: 1}}><label className="inp-label">Модель</label><input className="inp" value={userData.car.model} onChange={e => setUserData({...userData, car: {...userData.car, model: e.target.value}})} /></div>
+              <div className="ffield" style={{flex: 1}}>
+                <label className="inp-label">Марка</label>
+                <input className="inp" value={userData.car.brand} onChange={e => setUserData({...userData, car: {...userData.car, brand: e.target.value}})} />
+              </div>
+              <div className="ffield" style={{flex: 1}}>
+                <label className="inp-label">Модель</label>
+                <input className="inp" value={userData.car.model} onChange={e => setUserData({...userData, car: {...userData.car, model: e.target.value}})} />
+              </div>
             </div>
+
             <div className="frow" style={{ gap: '10px' }}>
+              <div className="ffield" style={{flex: 1}}>
+                <label className="inp-label">Год выпуска</label>
+                <input className="inp" type="number" placeholder="2020" value={userData.car.year} onChange={e => setUserData({...userData, car: {...userData.car, year: e.target.value}})} />
+              </div>
               <div className="ffield" style={{flex: 1}}>
                 <label className="inp-label">Объем двигателя</label>
                 <input className="inp" type="text" placeholder="Напр. 2.0" value={userData.car.engine_volume} onChange={e => setUserData({...userData, car: {...userData.car, engine_volume: e.target.value}})} />
               </div>
             </div>
-            {/* НОВОЕ ПОЛЕ ДЛЯ VIN КОДА */}
-            <div className="ffield">
-              <label className="inp-label">VIN-код</label>
-              <input className="inp" type="text" placeholder="XTA..." value={userData.car.vin_code} onChange={e => setUserData({...userData, car: {...userData.car, vin_code: e.target.value.toUpperCase()}})} style={{ textTransform: 'uppercase' }} />
+
+            <div className="frow" style={{ gap: '10px' }}>
+              <div className="ffield" style={{flex: 1}}>
+                <label className="inp-label">Пробег (км)</label>
+                <input className="inp" type="number" placeholder="0" value={userData.car.mileage} onChange={e => setUserData({...userData, car: {...userData.car, mileage: e.target.value}})} />
+              </div>
+              <div className="ffield" style={{flex: 1}}>
+                <label className="inp-label">VIN-код</label>
+                <input className="inp" type="text" placeholder="XTA..." value={userData.car.vin_code} onChange={e => setUserData({...userData, car: {...userData.car, vin_code: e.target.value.toUpperCase()}})} style={{ textTransform: 'uppercase' }} />
+              </div>
             </div>
+
             <button className="btn btn-primary btn-full" onClick={() => { setIsEditingCar(false); updateProfile(userData); }} disabled={saving}>Сохранить</button>
           </div>
         ) : (
@@ -262,9 +295,8 @@ export default function ProfileClient() {
             <div className="rem-ico o" style={{background:'var(--primary-hl)', color:'var(--primary)'}}><Car size={20} /></div>
             <div style={{flex:1}}>
               <h4>{userData.car.brand} {userData.car.model} {userData.car.engine_volume ? `(${userData.car.engine_volume}л)` : ''}</h4>
-              <p className="pg-sub">{userData.car.year} г.в. · {userData.car.mileage} км</p>
-              {/* ОТОБРАЖЕНИЕ VIN КОДА */}
-              {userData.car.vin_code && <p style={{ fontSize: '10px', color: 'var(--primary)', marginTop: '4px', letterSpacing: '0.05em', fontWeight: 600 }}>VIN: {userData.car.vin_code}</p>}
+              <p className="pg-sub">{userData.car.year !== '—' ? `${userData.car.year} г.в. · ` : ''}{userData.car.mileage} км</p>
+              {userData.car.vin_code && <p style={{ fontSize: '11px', color: 'var(--primary)', marginTop: '4px', letterSpacing: '0.05em', fontWeight: 700 }}>VIN: {userData.car.vin_code}</p>}
             </div>
           </div>
         )}
@@ -279,7 +311,7 @@ export default function ProfileClient() {
           {carPhotos.map(photo => (
             <div key={photo.id} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--divider)' }}>
               <img src={photo.photo_url} alt="Машина" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <button onClick={() => deleteCarPhoto(photo.id, photo.photo_url)} style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%', color: 'var(--red)', padding: '4px' }}>
+              <button onClick={() => deleteCarPhoto(photo.id, photo.photo_url)} style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%', color: 'var(--red)', padding: '4px', cursor: 'pointer' }}>
                 <Trash2 size={12}/>
               </button>
             </div>

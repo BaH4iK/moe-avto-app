@@ -32,15 +32,18 @@ export default function OnboardingClient() {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (user) {
+      // ИСПРАВЛЕНО: Превращаем пустую строку в null, чтобы БД не ругалась
+      const expiryDate = formData.insurance_expiry ? formData.insurance_expiry : null;
+
       const { error } = await supabase.from('profiles').upsert({
         id: user.id,
         full_name: formData.name,
         car_brand: formData.car_brand,
         car_model: formData.car_model,
-        car_year: formData.car_year,
+        car_year: parseInt(formData.car_year) || null,
         car_mileage: parseInt(formData.car_mileage) || 0,
         city: formData.city || 'Севастополь',
-        insurance_expiry: formData.insurance_expiry,
+        insurance_expiry: expiryDate, 
         onboarded: true,
         updated_at: new Date().toISOString()
       })
@@ -55,13 +58,11 @@ export default function OnboardingClient() {
   }
 
   return (
-    // Убрали все minHeight, flex-direction и прочие хаки. Просто обычный блок с отступами.
     <main className="page active" style={{ 
       padding: '0 var(--s6) calc(60px + env(safe-area-inset-bottom))',
       display: 'block' 
     }}>
       
-      {/* ИНДИКАТОР ПРОГРЕССА */}
       <div style={{ 
         display: 'flex', 
         gap: '8px', 
@@ -79,7 +80,6 @@ export default function OnboardingClient() {
         ))}
       </div>
 
-      {/* КОНТЕНТ ШАГОВ */}
       <div>
         {step === 1 && (
           <div className="fade-in">
@@ -106,7 +106,7 @@ export default function OnboardingClient() {
         {step === 2 && (
           <div className="fade-in">
             <h1 className="pg-title" style={{ fontSize: '32px' }}>Ваш автомобиль</h1>
-            <p className="pg-sub" style={{ marginBottom: 'var(--s8)' }}>Настроим сервис под вашу машину</p>
+            <p className="pg-sub" style={{ marginBottom: 'var(--s8)' }}>Настроим сервис под вашу машину (можно пропустить)</p>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s4)' }}>
               <div className="ffield">
@@ -142,7 +142,7 @@ export default function OnboardingClient() {
         {step === 4 && (
           <div className="fade-in">
             <h1 className="pg-title" style={{ fontSize: '32px' }}>Почти готово!</h1>
-            <p className="pg-sub" style={{ marginBottom: 'var(--s8)' }}>Когда заканчивается ваша страховка?</p>
+            <p className="pg-sub" style={{ marginBottom: 'var(--s8)' }}>Когда заканчивается ваша страховка? (необязательно)</p>
             
             <div className="ffield">
               <label className="inp-label">Дата окончания ОСАГО</label>
@@ -157,8 +157,6 @@ export default function OnboardingClient() {
         )}
       </div>
 
-      {/* КНОПКИ СТРОГО ПОД КОНТЕНТОМ */}
-      {/* marginTop: '32px' делает красивый отступ вниз от последнего поля ввода */}
       <div style={{ 
         display: 'flex', 
         gap: '12px', 
