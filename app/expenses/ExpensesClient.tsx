@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { 
   Plus, Fuel, Wrench, AlertCircle, ShoppingBag, 
-  BarChart3, CalendarDays, ChevronRight 
+  BarChart3, CalendarDays, Trash2, Pencil 
 } from 'lucide-react'
 import AddExpenseDrawer from './AddExpenseDrawer'
 
@@ -14,6 +14,11 @@ export default function ExpensesClient() {
   const [history, setHistory] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState('Все')
+
+  // Стейты для свайпа и редактирования
+  const [swipedItemId, setSwipedItemId] = useState<string | null>(null)
+  const [touchStartX, setTouchStartX] = useState<number | null>(null)
+  const [editingExpense, setEditingExpense] = useState<any>(null)
 
   const fetchExpenses = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -39,8 +44,46 @@ export default function ExpensesClient() {
       id: 'temp-' + Date.now(),
       isOptimistic: true 
     }, ...prev])
-    
     setTimeout(fetchExpenses, 2500)
+  }
+
+  const handleOptimisticEdit = (updatedExpense: any) => {
+    setHistory(prev => prev.map(item => item.id === updatedExpense.id ? { ...item, ...updatedExpense, isOptimistic: true } : item))
+    setTimeout(fetchExpenses, 2500)
+  }
+
+  // Обработчики свайпа
+  const handleTouchStart = (e: React.TouchEvent, id: string) => {
+    setTouchStartX(e.touches[0].clientX)
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent, id: string) => {
+    if (touchStartX !== null) {
+      const touchEndX = e.changedTouches[0].clientX
+      const diff = touchStartX - touchEndX
+
+      if (diff > 50) { // Свайп влево
+        setSwipedItemId(id)
+      } else if (diff < -50) { // Свайп вправо
+        if (swipedItemId === id) setSwipedItemId(null)
+      }
+    }
+    setTouchStartX(null)
+  }
+
+  // Удаление и Редактирование
+  const handleDeleteClick = async (id: string) => {
+    if (window.confirm('Точно удалить этот расход?')) {
+      setHistory(prev => prev.filter(i => i.id !== id))
+      await supabase.from('expenses').delete().eq('id', id)
+      setSwipedItemId(null)
+    }
+  }
+
+  const handleEditClick = (item: any) => {
+    setEditingExpense(item)
+    setSwipedItemId(null)
+    setIsDrawerOpen(true)
   }
 
   const catNames: any = { fuel: 'Топливо', service: 'Сервис', fine: 'Штраф', spare_parts: 'Запчасти' }
@@ -72,7 +115,6 @@ export default function ExpensesClient() {
         <p className="pg-sub">Общие затраты: <strong>{totalAmount.toLocaleString()} ₽</strong></p>
       </div>
 
-      {/* ИСПРАВЛЕНО: Категории теперь оборачиваются на новую строку (flex-wrap: wrap) */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: 'var(--s4)', flexWrap: 'wrap' }}>
         {['Все', 'Топливо', 'Сервис', 'Запчасти', 'Штрафы'].map(f => (
           <div key={f} className={`chip ${activeFilter === f ? 'active' : ''}`} onClick={() => setActiveFilter(f)}>{f}</div>
@@ -80,33 +122,58 @@ export default function ExpensesClient() {
       </div>
 
       <div className="card" style={{ textAlign: 'center', padding: 'var(--s6) var(--s4)', border: '1px dashed var(--divider)', marginBottom: 'var(--s4)' }}>
-        <button className="btn btn-primary btn-full" style={{ height: '52px' }} onClick={() => setIsDrawerOpen(true)}>
+        <button className="btn btn-primary btn-full" style={{ height: '52px' }} onClick={() => { setEditingExpense(null); setIsDrawerOpen(true); }}>
           <Plus size={18} /> Добавить расход
         </button>
       </div>
 
       <p className="section-label">История операций</p>
       
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s3)', paddingBottom: '100px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' }}>
         {filteredHistory.length > 0 ? (
           filteredHistory.map((item) => (
-            <div key={item.id} className="rcard" style={{ 
-              alignItems: 'flex-start', 
-              padding: '16px',
-              opacity: item.isOptimistic ? 0.5 : 1,
-              transition: '0.4s opacity ease'
-            }}>
-              <div className="rcard-ava" style={{ background: 'var(--surface2)', marginTop: '4px' }}>{getIcon(item.category)}</div>
-              <div className="rcard-info" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <h3 style={{ fontSize: '15px', fontWeight: 800, textTransform: 'uppercase' }}>{catNames[item.category] || 'Расход'}</h3>
-                <p style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                  {new Date(item.date).toLocaleDateString('ru-RU')}
-                  {item.mileage ? ` · ${Number(item.mileage).toLocaleString()} км` : ''}
-                </p>
-                {item.description && <p style={{ fontSize: '13px', color: 'var(--text)', fontStyle: 'italic' }}>«{item.description}»</p>}
+            <div key={item.id} style={{ position: 'relative', borderRadius: '24px', overflow: 'hidden', background: 'var(--surface2)' }}>
+              
+              {/* Кнопки под карточкой (Карандаш и Корзина) */}
+              <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '120px', display: 'flex' }}>
+                <button onClick={() => handleEditClick(item)} style={{ flex: 1, background: '#ffa726', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <Pencil size={20} />
+                </button>
+                <button onClick={() => handleDeleteClick(item.id)} style={{ flex: 1, background: '#ff4b4b', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <Trash2 size={20} />
+                </button>
               </div>
-              <div style={{ textAlign: 'right', marginLeft: 'auto' }}>
-                <div style={{ fontWeight: 900, fontSize: '17px' }}>{Number(item.amount).toLocaleString()} ₽</div>
+
+              {/* Сама карточка расхода */}
+              <div 
+                className="rcard" 
+                onTouchStart={e => handleTouchStart(e, item.id)}
+                onTouchEnd={e => handleTouchEnd(e, item.id)}
+                style={{ 
+                  transform: swipedItemId === item.id ? 'translateX(-120px)' : 'translateX(0)', 
+                  transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+                  margin: 0, 
+                  position: 'relative',
+                  zIndex: 2,
+                  background: 'var(--bg)', // Чтобы кнопки не просвечивали
+                  border: '1px solid var(--divider)',
+                  alignItems: 'flex-start', 
+                  padding: '16px',
+                  opacity: item.isOptimistic ? 0.5 : 1,
+                }}
+              >
+                <div className="rcard-ava" style={{ background: 'var(--surface2)', marginTop: '4px' }}>{getIcon(item.category)}</div>
+                <div className="rcard-info" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, textTransform: 'uppercase' }}>{catNames[item.category] || 'Расход'}</h3>
+                  <p style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                    {new Date(item.date).toLocaleDateString('ru-RU')}
+                    {item.mileage ? ` · ${Number(item.mileage).toLocaleString()} км` : ''}
+                  </p>
+                  {item.description && <p style={{ fontSize: '13px', color: 'var(--text)', fontStyle: 'italic' }}>«{item.description}»</p>}
+                </div>
+                <div style={{ textAlign: 'right', marginLeft: 'auto' }}>
+                  <div style={{ fontWeight: 900, fontSize: '17px' }}>{Number(item.amount).toLocaleString()} ₽</div>
+                </div>
               </div>
             </div>
           ))
@@ -121,7 +188,9 @@ export default function ExpensesClient() {
       <AddExpenseDrawer 
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)} 
-        onOptimisticAdd={handleOptimisticAdd} 
+        onOptimisticAdd={handleOptimisticAdd}
+        onOptimisticEdit={handleOptimisticEdit}
+        editingItem={editingExpense}
       />
     </main>
   )

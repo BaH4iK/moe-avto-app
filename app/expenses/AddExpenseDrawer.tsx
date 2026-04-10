@@ -1,18 +1,37 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { X, Fuel, Wrench, AlertCircle, ShoppingBag, Mic, MicOff } from 'lucide-react'
+import { X, Fuel, Wrench, AlertCircle, ShoppingBag, Mic, Square } from 'lucide-react'
 
-export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: any) {
+export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd, onOptimisticEdit, editingItem }: any) {
   const supabase = createClient()
   const [isListening, setIsListening] = useState(false)
+  const recognitionRef = useRef<any>(null)
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  
   const [form, setForm] = useState({
     amount: '',
     category: 'fuel',
     description: '',
     mileage: ''
   })
+
+  // Подхватываем данные, если мы редактируем старую запись
+  useEffect(() => {
+    if (isOpen) {
+      if (editingItem) {
+        setForm({
+          amount: String(editingItem.amount),
+          category: editingItem.category,
+          description: editingItem.description || '',
+          mileage: editingItem.mileage ? String(editingItem.mileage) : ''
+        })
+      } else {
+        setForm({ amount: '', category: 'fuel', description: '', mileage: '' })
+      }
+    }
+  }, [isOpen, editingItem])
 
   const categories = [
     { id: 'fuel', label: 'Топливо', icon: <Fuel size={18} />, color: 'var(--primary)', keywords: ['заправ', 'бензин', 'топливо', 'газ', 'солярка', 'литр'] },
@@ -23,17 +42,9 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
 
   const extractAmount = (text: string) => {
     let t = ' ' + text.toLowerCase() + ' ';
-
-    // 1. Защита от диктофона iOS: отрезаем прилипшую марку бензина (например, "3.658-95" -> убираем "-95")
     t = t.replace(/-(92|95|98|100)\b/g, '');
-    
-    // 2. Убираем отдельно стоящие марки топлива, чтобы они не приплюсовались к сумме ("бензин 95 на 2000")
     t = t.replace(/(бензин|аи|топливо|дизель)\s*(92|95|98|100)\b/gi, '$1');
-
-    // 3. Склеиваем тысячи: убираем точки и пробелы, которые ставит диктофон (2.000 -> 2000, 3 658 -> 3658)
     t = t.replace(/(\d)[\.\s](\d{3})(?!\d)/g, '$1$2');
-
-    // Дальше идет твоя оригинальная логика сленга
     t = t.replace(/ полторы\s*(тысячи|тысяч|тыщи|тыщ|к|k)? /g, ' 1500 ');
     t = t.replace(/ полторушк[ауие] /g, ' 1500 ');
     t = t.replace(/ двушк[ауие] /g, ' 2000 ');
@@ -52,17 +63,10 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
       t = t.replace(new RegExp(`(^|\\s)${word}(?=\\s|$)`, 'g'), `$1${num}`);
     }
 
-    t = t.replace(/(\d+)\s*(тысяч[аиу]?|тыщ[аиу]?|к|k)(?=\s|$)/gi, (match, p1) => {
-      return String(parseInt(p1) * 1000);
-    });
-
+    t = t.replace(/(\d+)\s*(тысяч[аиу]?|тыщ[аиу]?|к|k)(?=\s|$)/gi, (match, p1) => String(parseInt(p1) * 1000));
     t = t.replace(/(^|\s)(тысяч[аиу]?|тыщ[аиу]?)(?=\s|$)/g, '$1 1000 ');
+    t = t.replace(/(^|\s)([1-9])\s+([1-9]00)(?=\s|$)/g, (match, space, p1, p2) => space + String(parseInt(p1) * 1000 + parseInt(p2)));
 
-    t = t.replace(/(^|\s)([1-9])\s+([1-9]00)(?=\s|$)/g, (match, space, p1, p2) => {
-       return space + String(parseInt(p1) * 1000 + parseInt(p2));
-    });
-
-    // Твой цикл сложения (теперь он видит чистые цифры)
     let currentSum = 0;
     const tokens = t.split(/\s+/).filter(Boolean);
     for (let tok of tokens) {
@@ -73,36 +77,40 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
     return currentSum > 0 ? String(currentSum) : '';
   }
 
+  const stopVoiceInput = () => {
+    if (recognitionRef.current) recognitionRef.current.stop()
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
+    setIsListening(false)
+  }
+
   const startVoiceInput = () => {
+    if (isListening) {
+      stopVoiceInput()
+      return
+    }
+
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) return alert('Ваш браузер не поддерживает голосовой ввод')
 
     const recognition = new SpeechRecognition()
+    recognitionRef.current = recognition
     recognition.lang = 'ru-RU'
-    
     recognition.continuous = true
     recognition.interimResults = true
 
-    let silenceTimer: NodeJS.Timeout;
-
-    const stopRec = () => {
-      recognition.stop()
-      setIsListening(false)
-    }
-
     recognition.onstart = () => {
       setIsListening(true)
-      silenceTimer = setTimeout(stopRec, 4000)
+      silenceTimerRef.current = setTimeout(stopVoiceInput, 4000)
     }
 
     recognition.onend = () => {
-      clearTimeout(silenceTimer)
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
       setIsListening(false)
     }
 
     recognition.onresult = (event: any) => {
-      clearTimeout(silenceTimer)
-      silenceTimer = setTimeout(stopRec, 3000)
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
+      silenceTimerRef.current = setTimeout(stopVoiceInput, 3000)
 
       let text = ''
       for (let i = 0; i < event.results.length; i++) {
@@ -111,16 +119,10 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
       text = text.toLowerCase()
       
       const finalAmount = extractAmount(text);
-      if (finalAmount) {
-        setForm(prev => ({ ...prev, amount: finalAmount }))
-      }
+      if (finalAmount) setForm(prev => ({ ...prev, amount: finalAmount }))
 
-      const foundCategory = categories.find(cat => 
-        cat.keywords.some(word => text.includes(word))
-      )
-      if (foundCategory) {
-        setForm(prev => ({ ...prev, category: foundCategory.id }))
-      }
+      const foundCategory = categories.find(cat => cat.keywords.some(word => text.includes(word)))
+      if (foundCategory) setForm(prev => ({ ...prev, category: foundCategory.id }))
 
       setForm(prev => ({ ...prev, description: text.charAt(0).toUpperCase() + text.slice(1) }))
     }
@@ -135,29 +137,33 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
     const amountVal = parseFloat(form.amount)
     const descriptionVal = form.description.trim() || null
     const mileageVal = form.mileage ? parseInt(form.mileage) : null
-    const now = new Date().toISOString()
+    const now = editingItem ? editingItem.date : new Date().toISOString() // Сохраняем оригинальную дату при редактировании
 
-    onOptimisticAdd({
+    const payload = {
       amount: amountVal,
       category: form.category,
       description: descriptionVal,
       mileage: mileageVal,
       date: now
-    })
+    }
 
-    onClose()
-    setForm({ amount: '', category: 'fuel', description: '', mileage: '' })
-
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await supabase.from('expenses').insert({
-        user_id: user.id,
-        amount: amountVal,
-        category: form.category,
-        description: descriptionVal,
-        mileage: mileageVal,
-        date: now
-      })
+    // Если мы редактируем
+    if (editingItem) {
+      onOptimisticEdit({ ...editingItem, ...payload })
+      onClose()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from('expenses').update(payload).eq('id', editingItem.id)
+      }
+    } 
+    // Если мы создаем новый
+    else {
+      onOptimisticAdd({ ...payload })
+      onClose()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from('expenses').insert({ ...payload, user_id: user.id })
+      }
     }
   }
 
@@ -183,36 +189,31 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
         display: 'flex', flexDirection: 'column'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s6)' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Новый расход</h2>
+          <h2 style={{ fontSize: '18px', fontWeight: 800 }}>{editingItem ? 'Изменить расход' : 'Новый расход'}</h2>
           <button onClick={onClose} className="icon-btn" style={{ background: 'var(--surface)', borderRadius: '50%' }}>
             <X size={20} />
           </button>
         </div>
 
-        <button 
-          type="button"
-          onClick={startVoiceInput}
-          style={{
-            width: '100%',
-            height: '80px',
-            borderRadius: '24px',
-            background: isListening ? 'var(--red)' : 'var(--surface2)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            border: isListening ? '2px solid white' : '1px solid var(--divider)',
-            marginBottom: 'var(--s4)',
-            transition: '0.3s all ease',
-            animation: isListening ? 'pulse 1.5s infinite' : 'none'
-          }}
-        >
-          {isListening ? <MicOff size={24} color="white" /> : <Mic size={24} className="c-primary" />}
-          <span style={{ fontSize: '12px', fontWeight: 800, color: isListening ? 'white' : 'var(--text)' }}>
-            {isListening ? 'Слушаю... (выключится через 3 сек тишины)' : 'Нажать и продиктовать расход'}
-          </span>
-        </button>
+        {!editingItem && (
+          <button 
+            type="button"
+            onClick={startVoiceInput}
+            style={{
+              width: '100%', height: '80px', borderRadius: '24px',
+              background: isListening ? 'var(--red)' : 'var(--surface2)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              border: isListening ? '2px solid white' : '1px solid var(--divider)',
+              marginBottom: 'var(--s4)', transition: '0.3s all ease',
+              animation: isListening ? 'pulse 1.5s infinite' : 'none'
+            }}
+          >
+            {isListening ? <Square fill="white" size={24} color="white" /> : <Mic size={24} className="c-primary" />}
+            <span style={{ fontSize: '12px', fontWeight: 800, color: isListening ? 'white' : 'var(--text)' }}>
+              {isListening ? 'Остановить запись' : 'Нажать и продиктовать расход'}
+            </span>
+          </button>
+        )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s5)', flex: 1 }}>
           <div className="ffield">
@@ -240,13 +241,18 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
           </div>
 
           <div className="ffield">
+            <label className="inp-label">Пробег (одометр), км</label>
+            <input className="inp" type="number" placeholder="Напр. 45000" value={form.mileage} onChange={e => setForm({...form, mileage: e.target.value})} />
+          </div>
+
+          <div className="ffield">
             <label className="inp-label">Описание</label>
             <input className="inp" placeholder="Напр. Лукойл АИ-95" value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
           </div>
 
           <div style={{ marginTop: 'auto', paddingTop: 'var(--s4)' }}>
             <button className="btn btn-primary btn-full" type="submit" style={{ height: '56px', fontSize: '15px', fontWeight: 800, borderRadius: '16px' }}>
-              Сохранить запись
+              {editingItem ? 'Сохранить изменения' : 'Сохранить запись'}
             </button>
           </div>
         </form>

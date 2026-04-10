@@ -16,14 +16,14 @@ export default function DashboardClient() {
   const [profile, setProfile] = useState<any>(null)
   const [monthlyExpenses, setMonthlyExpenses] = useState(0)
   const [totalMileage, setTotalMileage] = useState(0)
+  const [monthlyMileage, setMonthlyMileage] = useState(0) // НОВОЕ СВОЙСТВО
   const [loading, setLoading] = useState(true)
-  const [isStandalone, setIsStandalone] = useState(false) // Для проверки PWA
+  const [isStandalone, setIsStandalone] = useState(false)
   
   const [daysToInsurance, setDaysToInsurance] = useState<number | null>(null)
   const [kmToService, setKmToService] = useState<number | null>(null)
 
   useEffect(() => {
-    // Проверка: запущено ли приложение как PWA (на главном экране)
     if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
       setIsStandalone(true)
     }
@@ -39,6 +39,7 @@ export default function DashboardClient() {
           .single()
         setProfile(profileData)
 
+        // Расчет дней до ОСАГО
         if (profileData?.insurance_expiry) {
           const expiry = new Date(profileData.insurance_expiry)
           const diffTime = expiry.getTime() - new Date().getTime()
@@ -55,14 +56,37 @@ export default function DashboardClient() {
           .eq('user_id', user.id)
 
         if (expenses) {
+          // Расходы за месяц
           const monthTotal = expenses
             .filter(e => e.date >= firstDayOfMonth)
             .reduce((acc, curr) => acc + Number(curr.amount), 0)
           setMonthlyExpenses(monthTotal)
 
+          // Максимальный пробег (одометр)
           const maxMileage = Math.max(...expenses.map(e => e.mileage || 0), profileData?.car_mileage || 0)
           setTotalMileage(maxMileage)
 
+          // РЕАЛЬНЫЙ ПРОБЕГ ЗА МЕСЯЦ
+          const expensesWithMileage = expenses.filter(e => e.mileage && e.mileage > 0)
+          let calcMonthlyMileage = 0
+          if (expensesWithMileage.length > 0) {
+            const thisMonth = expensesWithMileage.filter(e => e.date >= firstDayOfMonth)
+            const past = expensesWithMileage.filter(e => e.date < firstDayOfMonth)
+            
+            if (thisMonth.length > 0) {
+              const maxThisMonth = Math.max(...thisMonth.map(e => e.mileage))
+              if (past.length > 0) {
+                const maxPast = Math.max(...past.map(e => e.mileage))
+                calcMonthlyMileage = maxThisMonth - maxPast
+              } else {
+                const minThisMonth = Math.min(...thisMonth.map(e => e.mileage))
+                calcMonthlyMileage = maxThisMonth - minThisMonth
+              }
+            }
+          }
+          setMonthlyMileage(Math.max(0, calcMonthlyMileage))
+
+          // Расчет ТО
           const serviceExpenses = expenses
             .filter(e => e.category === 'Сервис' || e.category === 'ТО')
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -79,7 +103,26 @@ export default function DashboardClient() {
     loadDashboardData()
   }, [supabase])
 
-  if (loading) return null // Просто возвращаем пустоту, пока layout показывает машинку
+  if (loading) return null
+
+  // Умные статусы для ОСАГО
+  const getInsuranceStatus = (days: number | null) => {
+    if (days === null) return { color: '#00c853', bg: 'rgba(0,200,83,0.1)', text: 'Спокойно', style: { background: 'rgba(0,200,83,0.1)', color: '#00c853' } }
+    if (days < 10) return { color: '#ff4b4b', bg: 'rgba(255,75,75,0.1)', text: 'Срочно', style: { background: 'var(--red)', color: 'white' } }
+    if (days <= 30) return { color: '#ffa726', bg: 'rgba(255,167,38,0.1)', text: 'Скоро', style: { background: '#ffa726', color: 'white' } }
+    return { color: '#00c853', bg: 'rgba(0,200,83,0.1)', text: 'Спокойно', style: { background: 'rgba(0,200,83,0.1)', color: '#00c853' } }
+  }
+
+  // Умные статусы для ТО
+  const getServiceStatus = (km: number | null) => {
+    if (km === null) return { color: '#00c853', bg: 'rgba(0,200,83,0.1)', text: 'Спокойно', style: { background: 'rgba(0,200,83,0.1)', color: '#00c853' } }
+    if (km < 500) return { color: '#ff4b4b', bg: 'rgba(255,75,75,0.1)', text: 'Срочно', style: { background: 'var(--red)', color: 'white' } }
+    if (km <= 1500) return { color: '#ffa726', bg: 'rgba(255,167,38,0.1)', text: 'Скоро', style: { background: '#ffa726', color: 'white' } }
+    return { color: '#00c853', bg: 'rgba(0,200,83,0.1)', text: 'Спокойно', style: { background: 'rgba(0,200,83,0.1)', color: '#00c853' } }
+  }
+
+  const insStatus = getInsuranceStatus(daysToInsurance)
+  const srvStatus = getServiceStatus(kmToService)
 
   return (
     <main className="page active" style={{ paddingBottom: '140px' }}>
@@ -105,9 +148,9 @@ export default function DashboardClient() {
           <div>
             <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '6px' }}>Всё под контролем 👌</h3>
             <p style={{ fontSize: '12px', color: 'var(--muted)' }}>
-              ТО через <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{kmToService ? `${kmToService.toLocaleString()} км` : '—'}</span> · 
-              ОСАГО <span style={{ color: (daysToInsurance && daysToInsurance < 15) ? '#ff4b4b' : 'var(--primary)', fontWeight: 800 }}>
-                {daysToInsurance ? (daysToInsurance > 0 ? `${daysToInsurance} дн.` : 'Просрочен') : '—'}
+              ТО через <span style={{ color: srvStatus.color, fontWeight: 800 }}>{kmToService !== null ? `${kmToService.toLocaleString()} км` : '—'}</span> · 
+              ОСАГО <span style={{ color: insStatus.color, fontWeight: 800 }}>
+                {daysToInsurance !== null ? (daysToInsurance > 0 ? `${daysToInsurance} дн.` : 'Просрочен') : '—'}
               </span>
             </p>
           </div>
@@ -125,13 +168,13 @@ export default function DashboardClient() {
         <div className="card" style={{ padding: '16px' }}>
           <p style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>Расход за месяц</p>
           <h2 style={{ fontSize: '22px', fontWeight: 900 }}>{monthlyExpenses.toLocaleString()} ₽</h2>
-          <p style={{ fontSize: '10px', color: '#00c853', marginTop: '4px' }}>↗ +8% к прошлому</p>
+          <p style={{ fontSize: '10px', color: '#00c853', marginTop: '4px' }}>за этот месяц</p>
         </div>
         
         <div className="card" style={{ padding: '16px' }}>
           <p style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>Пробег в месяц</p>
-          <h2 style={{ fontSize: '22px', fontWeight: 900 }}>2 140 км</h2>
-          <p style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>— средний</p>
+          <h2 style={{ fontSize: '22px', fontWeight: 900 }}>{monthlyMileage.toLocaleString()} км</h2>
+          <p style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>за этот месяц</p>
         </div>
 
         <div className="card" style={{ padding: '16px' }}>
@@ -155,30 +198,36 @@ export default function DashboardClient() {
         </div>
         
         <div className="rem-row" style={{ display: 'flex', alignItems: 'center', padding: '14px 0', borderBottom: '1px solid var(--divider)', gap: '12px' }}>
-          <div className={`rem-ico ${daysToInsurance && daysToInsurance < 15 ? 'r' : 'b'}`}><ShieldAlert size={18} /></div>
+          <div style={{ width: 36, height: 36, borderRadius: 12, background: insStatus.bg, color: insStatus.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ShieldAlert size={18} />
+          </div>
           <div style={{ flex: 1 }}>
             <h4 style={{ fontSize: '14px', fontWeight: 700 }}>ОСАГО истекает</h4>
-            <p style={{ fontSize: '12px', color: 'var(--muted)' }}>Через {daysToInsurance || '—'} дней · 15 апреля</p>
+            <p style={{ fontSize: '12px', color: 'var(--muted)' }}>Через {daysToInsurance !== null ? daysToInsurance : '—'} дней</p>
           </div>
-          <span className="badge br" style={{ fontSize: '10px' }}>Срочно</span>
+          <span className="badge" style={{ fontSize: '10px', ...insStatus.style }}>{insStatus.text}</span>
         </div>
 
         <div className="rem-row" style={{ display: 'flex', alignItems: 'center', padding: '14px 0', borderBottom: '1px solid var(--divider)', gap: '12px' }}>
-          <div className="rem-ico y"><Wrench size={18} /></div>
+          <div style={{ width: 36, height: 36, borderRadius: 12, background: srvStatus.bg, color: srvStatus.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Wrench size={18} />
+          </div>
           <div style={{ flex: 1 }}>
             <h4 style={{ fontSize: '14px', fontWeight: 700 }}>Замена масла (ТО)</h4>
-            <p style={{ fontSize: '12px', color: 'var(--muted)' }}>Через ~{kmToService?.toLocaleString() || '1 200'} км</p>
+            <p style={{ fontSize: '12px', color: 'var(--muted)' }}>Через ~{kmToService !== null ? kmToService.toLocaleString() : '—'} км</p>
           </div>
-          <span className="badge bo" style={{ fontSize: '10px' }}>Скоро</span>
+          <span className="badge" style={{ fontSize: '10px', ...srvStatus.style }}>{srvStatus.text}</span>
         </div>
 
         <div className="rem-row" style={{ display: 'flex', alignItems: 'center', padding: '14px 0', gap: '12px' }}>
-          <div className="rem-ico b"><CloudSun size={18} /></div>
+          <div style={{ width: 36, height: 36, borderRadius: 12, background: 'rgba(0,122,255,0.1)', color: '#0a84ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <CloudSun size={18} />
+          </div>
           <div style={{ flex: 1 }}>
             <h4 style={{ fontSize: '14px', fontWeight: 700 }}>Погода для мойки ☀️</h4>
             <p style={{ fontSize: '12px', color: 'var(--muted)' }}>{profile?.wash_reminder_days || 3} дн. без осадков в Севастополе</p>
           </div>
-          <span className="badge bb" style={{ fontSize: '10px' }}>Умный совет</span>
+          <span className="badge" style={{ fontSize: '10px', background: 'rgba(0,122,255,0.1)', color: '#0a84ff' }}>Умный совет</span>
         </div>
       </div>
 
