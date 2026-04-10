@@ -74,7 +74,6 @@ export default function ProfileClient() {
     }
   })
 
-  // Ускоренная параллельная загрузка
   const loadProfileData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
@@ -303,16 +302,20 @@ export default function ProfileClient() {
             <div style={{flex:1}}>
               <h4>{userData.car.brand} {userData.car.model} {userData.car.engine_volume ? `(${userData.car.engine_volume}л)` : ''}</h4>
               <p className="pg-sub">{userData.car.year !== '—' ? `${userData.car.year} г.в. · ` : ''}{userData.car.mileage} км</p>
-              {userData.car.vin_code && <p style={{ fontSize: '11px', color: 'var(--primary)', marginTop: '4px', letterSpacing: '0.05em', fontWeight: 700 }}>VIN: {userData.car.vin_code}</p>}
+              
+              {/* ИСПРАВЛЕНО: Теперь, если VIN-код пустой, будет писать "Не указан" серым цветом */}
+              <p style={{ fontSize: '11px', color: userData.car.vin_code ? 'var(--primary)' : 'var(--muted)', marginTop: '4px', letterSpacing: '0.05em', fontWeight: 700 }}>
+                VIN: {userData.car.vin_code || 'Не указан'}
+              </p>
             </div>
           </div>
         )}
       </div>
 
-      {/* ИСПРАВЛЕНО: Блок ОСАГО без класса ffield, чтобы не ломать 100% ширину карточки */}
+      {/* ИСПРАВЛЕНО: Жесткий box-sizing для ОСАГО, чтобы не вылезал */}
       <div className="card" style={{marginTop:'var(--s4)'}}>
         <div className="card-h"><span className="card-t" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><ShieldAlert size={18} style={{ color: 'var(--red)' }} /> Страхование ОСАГО</span></div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
           <label className="inp-label">Дата окончания полиса</label>
           <input 
             className="inp" 
@@ -323,15 +326,15 @@ export default function ProfileClient() {
               setUserData(updated);
               updateProfile(updated);
             }} 
-            style={{ width: '100%' }}
+            style={{ width: '100%', boxSizing: 'border-box', margin: 0 }}
           />
         </div>
       </div>
 
-      {/* ИСПРАВЛЕНО: Блок ТО без класса ffield, чтобы не ломать 100% ширину карточки */}
+      {/* ИСПРАВЛЕНО: Жесткий box-sizing для ТО, чтобы не вылезал */}
       <div className="card" style={{marginTop:'var(--s4)'}}>
         <div className="card-h"><span className="card-t" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Wrench size={18} style={{ color: 'var(--primary)' }} /> Обслуживание (ТО)</span></div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
           <label className="inp-label">Периодичность (интервал)</label>
           <select 
             className="inp" 
@@ -341,7 +344,7 @@ export default function ProfileClient() {
               setUserData(updated);
               updateProfile(updated);
             }}
-            style={{ width: '100%' }}
+            style={{ width: '100%', boxSizing: 'border-box', margin: 0 }}
           >
             {[5000, 6000, 7000, 8000, 9000, 10000, 12000, 15000].map(val => (
               <option key={val} value={val}>Каждые {val.toLocaleString()} км</option>
