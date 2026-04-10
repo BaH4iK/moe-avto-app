@@ -128,7 +128,7 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
     recognition.start()
   }
 
-  // ЖЕЛЕЗОБЕТОННОЕ СОХРАНЕНИЕ
+  // ЖЕЛЕЗОБЕТОННОЕ СОХРАНЕНИЕ В БАЗУ
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.amount) return
@@ -138,37 +138,46 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
     const amountVal = parseFloat(form.amount)
     const descriptionVal = form.description.trim() || null
     const mileageVal = form.mileage ? parseInt(form.mileage) : null
-    const now = editingItem ? editingItem.date : new Date().toISOString() 
+    // При редактировании оставляем старую дату, при создании — новую
+    const dateVal = editingItem ? editingItem.date : new Date().toISOString() 
 
     const payload = {
       amount: amountVal,
       category: form.category,
       description: descriptionVal,
       mileage: mileageVal,
-      date: now
+      date: dateVal
     }
 
     const { data: { user } } = await supabase.auth.getUser()
     
     if (user) {
       if (editingItem) {
-        // ОБНОВЛЕНИЕ в базе
-        const { error } = await supabase.from('expenses').update(payload).eq('id', editingItem.id).eq('user_id', user.id)
+        // ОБНОВЛЕНИЕ СУЩЕСТВУЮЩЕЙ ЗАПИСИ
+        const { error } = await supabase
+          .from('expenses')
+          .update(payload)
+          .eq('id', editingItem.id)
+          .eq('user_id', user.id)
+
         if (error) {
-          alert('Ошибка обновления: ' + error.message)
+          alert('Ошибка при обновлении: ' + error.message)
         } else {
+          onSuccess() // Вызываем обновление списка в главном компоненте
           onClose()
-          onSuccess() // Командуем странице перекачать данные
         }
       } else {
-        // ДОБАВЛЕНИЕ в базу
-        const { error } = await supabase.from('expenses').insert({ ...payload, user_id: user.id })
+        // СОЗДАНИЕ НОВОЙ ЗАПИСИ
+        const { error } = await supabase
+          .from('expenses')
+          .insert({ ...payload, user_id: user.id })
+
         if (error) {
-          alert('Ошибка сохранения: ' + error.message)
+          alert('Ошибка при сохранении: ' + error.message)
         } else {
           setForm({ amount: '', category: 'fuel', description: '', mileage: '' })
+          onSuccess() // Вызываем обновление списка
           onClose()
-          onSuccess() // Командуем странице перекачать данные
         }
       }
     }
@@ -265,14 +274,6 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
           </div>
         </form>
       </div>
-      
-      <style jsx>{`
-        @keyframes pulse {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.02); opacity: 0.8; }
-          100% { transform: scale(1); }
-        }
-      `}</style>
     </div>
   )
 }
