@@ -69,13 +69,40 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
 
     const recognition = new SpeechRecognition()
     recognition.lang = 'ru-RU'
-    recognition.continuous = false
+    
+    // ИСПРАВЛЕНО: Включаем непрерывное распознавание
+    recognition.continuous = true
+    recognition.interimResults = true
 
-    recognition.onstart = () => setIsListening(true)
-    recognition.onend = () => setIsListening(false)
+    let silenceTimer: NodeJS.Timeout;
+
+    const stopRec = () => {
+      recognition.stop()
+      setIsListening(false)
+    }
+
+    recognition.onstart = () => {
+      setIsListening(true)
+      // Если включил и 4 секунды молчит вообще - вырубаем
+      silenceTimer = setTimeout(stopRec, 4000)
+    }
+
+    recognition.onend = () => {
+      clearTimeout(silenceTimer)
+      setIsListening(false)
+    }
 
     recognition.onresult = (event: any) => {
-      let text = event.results[0][0].transcript.toLowerCase()
+      // Сбрасываем таймер при каждом распознанном слове
+      clearTimeout(silenceTimer)
+      // Если после последнего слова прошло 3 секунды - выключаем
+      silenceTimer = setTimeout(stopRec, 3000)
+
+      let text = ''
+      for (let i = 0; i < event.results.length; i++) {
+        text += event.results[i][0].transcript
+      }
+      text = text.toLowerCase()
       
       const finalAmount = extractAmount(text);
       if (finalAmount) {
@@ -140,7 +167,6 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      {/* ИСПРАВЛЕНО: Сделал шторку выше (minHeight: '65vh') и добавил огромный отступ снизу (paddingBottom: 100px), чтобы кнопка гарантированно была над Bottom Nav */}
       <div className="card" style={{ 
         width: '100%', maxWidth: '520px', 
         minHeight: '65vh', maxHeight: '90vh', 
@@ -178,7 +204,7 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
         >
           {isListening ? <MicOff size={24} color="white" /> : <Mic size={24} className="c-primary" />}
           <span style={{ fontSize: '12px', fontWeight: 800, color: isListening ? 'white' : 'var(--text)' }}>
-            {isListening ? 'Слушаю... говорите сумму и категорию' : 'Нажать и продиктовать расход'}
+            {isListening ? 'Слушаю... (выключится через 3 сек тишины)' : 'Нажать и продиктовать расход'}
           </span>
         </button>
 

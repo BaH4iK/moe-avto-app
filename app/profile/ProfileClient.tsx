@@ -18,7 +18,7 @@ const ALL_CITIES = [
   "Астрахань", "Киров", "Пенза", "Севастополь", "Липецк", "Чебоксары", 
   "Балашиха", "Калининград", "Тула", "Курск", "Ставрополь", "Сочи", 
   "Улан-Удэ", "Тверь", "Магнитогорск", "Иваново", "Брянск", "Белгород",
-  "Сургут", "Владимир", "Чита", "Архангельск", "Нижний Тагил", "Smolensk",
+  "Сургут", "Владимир", "Чита", "Архангельск", "Нижний Тагил", "Смоленск",
   "Калуга", "Якутск", "Саранск", "Череповец", "Курган", "Вологда",
   "Орел", "Подольск", "Грозный", "Мурманск", "Тамбов", "Стерлитамак",
   "Петрозаводск", "Кострома", "Нижневартовск", "Новороссийск", "Йошкар-Ола",
@@ -303,7 +303,6 @@ export default function ProfileClient() {
               <h4>{userData.car.brand} {userData.car.model} {userData.car.engine_volume ? `(${userData.car.engine_volume}л)` : ''}</h4>
               <p className="pg-sub">{userData.car.year !== '—' ? `${userData.car.year} г.в. · ` : ''}{userData.car.mileage} км</p>
               
-              {/* ИСПРАВЛЕНО: Теперь, если VIN-код пустой, будет писать "Не указан" серым цветом */}
               <p style={{ fontSize: '11px', color: userData.car.vin_code ? 'var(--primary)' : 'var(--muted)', marginTop: '4px', letterSpacing: '0.05em', fontWeight: 700 }}>
                 VIN: {userData.car.vin_code || 'Не указан'}
               </p>
@@ -312,10 +311,10 @@ export default function ProfileClient() {
         )}
       </div>
 
-      {/* ИСПРАВЛЕНО: Жесткий box-sizing для ОСАГО, чтобы не вылезал */}
-      <div className="card" style={{marginTop:'var(--s4)'}}>
+      {/* ИСПРАВЛЕНО: Добавлен overflow: hidden для карточки и WebkitAppearance: 'none' для input */}
+      <div className="card" style={{marginTop:'var(--s4)', overflow: 'hidden'}}>
         <div className="card-h"><span className="card-t" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><ShieldAlert size={18} style={{ color: 'var(--red)' }} /> Страхование ОСАГО</span></div>
-        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflow: 'hidden' }}>
           <label className="inp-label">Дата окончания полиса</label>
           <input 
             className="inp" 
@@ -326,15 +325,15 @@ export default function ProfileClient() {
               setUserData(updated);
               updateProfile(updated);
             }} 
-            style={{ width: '100%', boxSizing: 'border-box', margin: 0 }}
+            style={{ width: '100%', boxSizing: 'border-box', margin: 0, WebkitAppearance: 'none', backgroundClip: 'padding-box' }}
           />
         </div>
       </div>
 
-      {/* ИСПРАВЛЕНО: Жесткий box-sizing для ТО, чтобы не вылезал */}
-      <div className="card" style={{marginTop:'var(--s4)'}}>
+      {/* ИСПРАВЛЕНО: Добавлен overflow: hidden для карточки и WebkitAppearance: 'none' для select */}
+      <div className="card" style={{marginTop:'var(--s4)', overflow: 'hidden'}}>
         <div className="card-h"><span className="card-t" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Wrench size={18} style={{ color: 'var(--primary)' }} /> Обслуживание (ТО)</span></div>
-        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflow: 'hidden' }}>
           <label className="inp-label">Периодичность (интервал)</label>
           <select 
             className="inp" 
@@ -344,7 +343,7 @@ export default function ProfileClient() {
               setUserData(updated);
               updateProfile(updated);
             }}
-            style={{ width: '100%', boxSizing: 'border-box', margin: 0 }}
+            style={{ width: '100%', boxSizing: 'border-box', margin: 0, WebkitAppearance: 'none', backgroundClip: 'padding-box' }}
           >
             {[5000, 6000, 7000, 8000, 9000, 10000, 12000, 15000].map(val => (
               <option key={val} value={val}>Каждые {val.toLocaleString()} км</option>
