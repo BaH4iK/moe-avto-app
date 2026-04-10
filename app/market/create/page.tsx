@@ -16,6 +16,7 @@ export default function CreatePostPage() {
   const [loading, setLoading] = useState(true)
   const [publishing, setPublishing] = useState(false)
   const [userPhotos, setUserPhotos] = useState<any[]>([])
+  const [garageProfile, setGarageProfile] = useState<any>(null) // НОВОЕ: Стейт для хранения профиля
   
   const [formData, setFormData] = useState({
     brand: '',
@@ -45,27 +46,28 @@ export default function CreatePostPage() {
         const { data: photos } = await supabase.from('car_photos').select('*').eq('user_id', user.id)
         if (photos) setUserPhotos(photos)
         
-        // По умолчанию ставим город из профиля
-        const { data: profile } = await supabase.from('profiles').select('city').eq('id', user.id).single()
-        if (profile?.city) setFormData(prev => ({ ...prev, city: profile.city }))
+        // ИСПРАВЛЕНО: Получаем весь профиль, чтобы вывести марку и модель авто
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+        if (profile) {
+          setGarageProfile(profile)
+          if (profile.city) setFormData(prev => ({ ...prev, city: profile.city }))
+        }
       }
       setLoading(false)
     }
     initData()
   }, [supabase])
 
-  const selectFromGarage = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user?.id).single()
-    
-    if (profile) {
+  const selectFromGarage = () => {
+    // ИСПРАВЛЕНО: Берем данные сразу из загруженного профиля
+    if (garageProfile) {
       setFormData({
         ...formData,
-        brand: profile.car_brand || '',
-        model: profile.car_model || '',
-        year: profile.car_year?.toString() || '',
-        mileage: profile.car_mileage?.toString() || '',
-        city: profile.city || formData.city
+        brand: garageProfile.car_brand || '',
+        model: garageProfile.car_model || '',
+        year: garageProfile.car_year?.toString() || '',
+        mileage: garageProfile.car_mileage?.toString() || '',
+        city: garageProfile.city || formData.city
       })
     }
     setStep(2)
@@ -134,7 +136,12 @@ export default function CreatePostPage() {
             </div>
             <div style={{ flex: 1 }}>
               <h3 style={{ fontSize: '17px', fontWeight: 800 }}>Авто из гаража</h3>
-              <p style={{ fontSize: '13px', color: 'var(--muted)' }}>Ваш Geely Monjaro</p>
+              {/* ИСПРАВЛЕНО: Динамический вывод марки и модели из профиля */}
+              <p style={{ fontSize: '13px', color: 'var(--muted)' }}>
+                {garageProfile?.car_brand || garageProfile?.car_model 
+                  ? `Ваш ${garageProfile.car_brand || ''} ${garageProfile.car_model || ''}`.trim()
+                  : 'Автомобиль не указан'}
+              </p>
             </div>
             <ChevronRight size={20} className="c-muted" />
           </div>

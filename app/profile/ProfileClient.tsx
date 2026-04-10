@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { 
   MapPin, Bell, LogOut, Camera, ChevronRight, Save, Loader2, X, Search, 
-  Car, UserCircle2, PlusCircle, Trash2, CheckCircle2, ShieldAlert, Wrench
+  Car, UserCircle2, PlusCircle, Trash2, CheckCircle2, ShieldAlert, Wrench,
+  ArrowLeft, Plus, User
 } from 'lucide-react'
 
 const ALL_CITIES = [
@@ -37,10 +38,8 @@ export default function ProfileClient() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
-  const [isEditingCar, setIsEditingCar] = useState(false)
   const [showCityPicker, setShowCityPicker] = useState(false)
   const [searchCity, setSearchCity] = useState('')
-  const [notifications, setNotifications] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [carPhotos, setCarPhotos] = useState<any[]>([])
 
@@ -59,19 +58,12 @@ export default function ProfileClient() {
       vin_code: string;
     }
   }>({
-    name: 'Водитель',
-    city: 'Не указан',
+    name: '',
+    city: '',
     avatarUrl: null,
     insurance_expiry: '',
     service_interval: 10000,
-    car: { 
-      brand: '—', 
-      model: '—', 
-      year: '—', 
-      mileage: '0',
-      engine_volume: '',
-      vin_code: ''
-    }
+    car: { brand: '', model: '', year: '', mileage: '', engine_volume: '', vin_code: '' }
   })
 
   const loadProfileData = useCallback(async () => {
@@ -86,16 +78,16 @@ export default function ProfileClient() {
       
       if (profileRes.data) {
         setUserData({
-          name: profileRes.data.full_name || 'Водитель',
+          name: profileRes.data.full_name || '',
           city: profileRes.data.city || 'Севастополь',
           avatarUrl: profileRes.data.avatar_url || null,
           insurance_expiry: profileRes.data.insurance_expiry || '',
           service_interval: profileRes.data.service_interval || 10000,
           car: {
-            brand: profileRes.data.car_brand || '—',
-            model: profileRes.data.car_model || '—',
-            year: profileRes.data.car_year?.toString() || '—',
-            mileage: profileRes.data.car_mileage?.toString() || '0',
+            brand: profileRes.data.car_brand || '',
+            model: profileRes.data.car_model || '',
+            year: profileRes.data.car_year?.toString() || '',
+            mileage: profileRes.data.car_mileage?.toString() || '',
             engine_volume: profileRes.data.engine_volume?.toString() || '',
             vin_code: profileRes.data.vin_code || ''
           }
@@ -113,24 +105,30 @@ export default function ProfileClient() {
     loadProfileData()
   }, [loadProfileData])
 
-  const updateProfile = async (newData: any) => {
+  const handleSaveAll = async () => {
     if (!user) return
     setSaving(true)
     const { error } = await supabase.from('profiles').upsert({
       id: user.id,
-      city: newData.city,
-      insurance_expiry: newData.insurance_expiry || null,
-      service_interval: newData.service_interval,
-      car_brand: newData.car.brand,
-      car_model: newData.car.model,
-      car_year: parseInt(newData.car.year) || null,
-      engine_volume: newData.car.engine_volume ? parseFloat(newData.car.engine_volume.toString().replace(',', '.')) : null,
-      car_mileage: parseInt(newData.car.mileage) || 0,
-      vin_code: newData.car.vin_code || null,
+      full_name: userData.name || null,
+      city: userData.city || null,
+      insurance_expiry: userData.insurance_expiry || null,
+      service_interval: userData.service_interval,
+      car_brand: userData.car.brand || null,
+      car_model: userData.car.model || null,
+      car_year: parseInt(userData.car.year) || null,
+      engine_volume: userData.car.engine_volume ? parseFloat(userData.car.engine_volume.toString().replace(',', '.')) : null,
+      car_mileage: parseInt(userData.car.mileage) || 0,
+      vin_code: userData.car.vin_code || null,
       updated_at: new Date().toISOString()
     })
-    if (error) alert('Ошибка: ' + error.message)
-    setSaving(false)
+    
+    if (error) {
+      alert('Ошибка при сохранении: ' + error.message)
+    } else {
+      // Можно показать красивое уведомление, пока просто снимаем лоадинг
+      setSaving(false)
+    }
   }
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -199,7 +197,7 @@ export default function ProfileClient() {
   if (loading && !saving) return <main className="page active" style={{display:'flex', alignItems:'center', justifyContent:'center'}}><Loader2 className="animate-spin" size={32} color="var(--primary)"/></main>
 
   return (
-    <main className="page active" style={{ paddingBottom: '100px' }}>
+    <main className="page active" style={{ paddingBottom: '120px', paddingTop: 'var(--s4)' }}>
       
       {/* МОДАЛКА ВЫБОРА ГОРОДА */}
       {showCityPicker && (
@@ -220,7 +218,6 @@ export default function ProfileClient() {
                 <div key={city} onClick={() => {
                     const updated = { ...userData, city };
                     setUserData(updated); 
-                    updateProfile(updated);
                     setShowCityPicker(false); 
                     setSearchCity('');
                   }}
@@ -234,127 +231,140 @@ export default function ProfileClient() {
         </div>
       )}
 
-      <div className="pg-head">
-        <h1 className="pg-title">Профиль</h1>
-        {uploadingPhoto && <span style={{fontSize:'10px', color:'var(--primary)'}}><Loader2 className="animate-spin" size={10} style={{display:'inline'}}/> Обновление...</span>}
+      {/* ШАПКА: Назад и Выход */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s6)' }}>
+        <button onClick={() => router.back()} className="icon-btn" style={{ background: 'var(--surface)', borderRadius: '50%' }}>
+          <ArrowLeft size={20} />
+        </button>
+        <button onClick={handleLogout} className="icon-btn" style={{ background: 'var(--surface)', borderRadius: '50%', color: 'var(--red)' }}>
+          <LogOut size={20} />
+        </button>
       </div>
 
-      <div className="profile-ava-wrap" style={{textAlign:'center', marginBottom:'var(--s6)'}}>
-        <label htmlFor="ava-upload" className="profile-ava" style={{width:90, height:90, background:'var(--surface2)', color:'var(--muted)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto', fontSize:'32px', fontWeight:800, position:'relative', cursor: 'pointer', overflow:'hidden'}}>
-          {userData.avatarUrl ? (
-            <img src={userData.avatarUrl} alt="Аватар" style={{width:'100%', height:'100%', objectFit: 'cover'}} />
-          ) : (
-            <UserCircle2 size={40}/>
-          )}
-          <div className="ava-edit" style={{position:'absolute', bottom:0, right:0, background:'var(--primary)', color:'white', borderRadius:'50%', padding:'6px', border:'2px solid var(--bg)'}}><Camera size={14}/></div>
-          <input id="ava-upload" type="file" accept="image/*" onChange={handleAvatarUpload} style={{display:'none'}} disabled={uploadingPhoto} />
+      {/* АВАТАР */}
+      <div style={{ textAlign: 'center', marginBottom: 'var(--s8)' }}>
+        <label htmlFor="ava-upload" style={{ position: 'relative', display: 'inline-block', cursor: 'pointer' }}>
+          <div style={{ width: 100, height: 100, borderRadius: '50%', background: 'var(--surface2)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--surface)' }}>
+            {userData.avatarUrl ? (
+              <img src={userData.avatarUrl} alt="Аватар" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <UserCircle2 size={50} color="var(--muted)" />
+            )}
+          </div>
+          <div style={{ position: 'absolute', bottom: 0, right: 0, background: 'var(--primary)', color: 'white', borderRadius: '50%', padding: '6px', border: '3px solid var(--bg)', display: 'flex' }}>
+            <Plus size={16} strokeWidth={3} />
+          </div>
+          <input id="ava-upload" type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} disabled={uploadingPhoto} />
         </label>
-        
-        <h2 style={{marginTop:'var(--s3)', fontSize:'20px'}}>{userData.name}</h2>
-        <p className="pg-sub">ID: {user?.id.slice(0,8)}</p>
+        {uploadingPhoto && <div style={{ fontSize: '10px', color: 'var(--primary)', marginTop: '4px' }}><Loader2 className="animate-spin" size={10} style={{ display: 'inline' }}/> Обновление...</div>}
+        <h2 style={{ marginTop: 'var(--s3)', fontSize: '22px', fontWeight: 800 }}>{userData.name || 'Имя не указано'}</h2>
       </div>
 
-      <div className="card">
-        <div className="card-h">
-          <span className="card-t" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Car size={18} className="c-primary" /> Мой автомобиль</span>
-          <button className="btn btn-ghost btn-sm" onClick={() => setIsEditingCar(!isEditingCar)}>{isEditingCar ? 'Отмена' : 'Изменить'}</button>
-        </div>
-        
-        {isEditingCar ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s3)' }}>
-            <div className="frow" style={{ gap: '10px' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <label className="inp-label">Марка</label>
-                <input className="inp" value={userData.car.brand} onChange={e => setUserData({...userData, car: {...userData.car, brand: e.target.value}})} />
-              </div>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <label className="inp-label">Модель</label>
-                <input className="inp" value={userData.car.model} onChange={e => setUserData({...userData, car: {...userData.car, model: e.target.value}})} />
-              </div>
-            </div>
-
-            <div className="frow" style={{ gap: '10px' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <label className="inp-label">Год выпуска</label>
-                <input className="inp" type="number" placeholder="2020" value={userData.car.year} onChange={e => setUserData({...userData, car: {...userData.car, year: e.target.value}})} />
-              </div>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <label className="inp-label">Объем двигателя</label>
-                <input className="inp" type="text" placeholder="Напр. 2.0" value={userData.car.engine_volume} onChange={e => setUserData({...userData, car: {...userData.car, engine_volume: e.target.value}})} />
-              </div>
-            </div>
-
-            <div className="frow" style={{ gap: '10px' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <label className="inp-label">Пробег (км)</label>
-                <input className="inp" type="number" placeholder="0" value={userData.car.mileage} onChange={e => setUserData({...userData, car: {...userData.car, mileage: e.target.value}})} />
-              </div>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <label className="inp-label">VIN-код</label>
-                <input className="inp" type="text" placeholder="XTA..." value={userData.car.vin_code} onChange={e => setUserData({...userData, car: {...userData.car, vin_code: e.target.value.toUpperCase()}})} style={{ textTransform: 'uppercase' }} />
-              </div>
-            </div>
-
-            <button className="btn btn-primary btn-full" onClick={() => { setIsEditingCar(false); updateProfile(userData); }} disabled={saving}>Сохранить</button>
+      {/* ЛИЧНЫЕ ДАННЫЕ */}
+      <div style={{ marginBottom: 'var(--s6)' }}>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--s3)', color: 'var(--muted)' }}>
+          <User size={16} /> Личные данные
+        </h3>
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s4)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <input className="inp" placeholder="Ввод имени" value={userData.name} onChange={e => setUserData({...userData, name: e.target.value})} />
           </div>
-        ) : (
-          <div className="car-mini active" style={{display:'flex', alignItems:'center', gap:'12px', background: 'none', border: 'none', padding: 0}}>
-            <div style={{flex:1}}>
-              <h4>{userData.car.brand} {userData.car.model} {userData.car.engine_volume ? `(${userData.car.engine_volume}л)` : ''}</h4>
-              <p className="pg-sub">{userData.car.year !== '—' ? `${userData.car.year} г.в. · ` : ''}{userData.car.mileage} км</p>
-              
-              <p style={{ fontSize: '11px', color: userData.car.vin_code ? 'var(--primary)' : 'var(--muted)', marginTop: '4px', letterSpacing: '0.05em', fontWeight: 700 }}>
-                VIN: {userData.car.vin_code || 'Не указан'}
-              </p>
+          <div style={{ display: 'flex', flexDirection: 'column' }} onClick={() => setShowCityPicker(true)}>
+            <input className="inp" placeholder="Ввод города" value={userData.city} readOnly style={{ pointerEvents: 'none' }} />
+          </div>
+        </div>
+      </div>
+
+      {/* МОЙ АВТОМОБИЛЬ */}
+      <div style={{ marginBottom: 'var(--s6)' }}>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--s3)', color: 'var(--muted)' }}>
+          <Car size={16} /> Мой автомобиль
+        </h3>
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          
+          <div className="frow" style={{ gap: '10px' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <input className="inp" style={{ width: '100%', boxSizing: 'border-box' }} value={userData.car.brand} onChange={e => setUserData({...userData, car: {...userData.car, brand: e.target.value}})} placeholder="Марка" />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <input className="inp" style={{ width: '100%', boxSizing: 'border-box' }} value={userData.car.model} onChange={e => setUserData({...userData, car: {...userData.car, model: e.target.value}})} placeholder="Модель" />
             </div>
           </div>
-        )}
-      </div>
 
-      {/* ИСПРАВЛЕНО: Добавлен overflow: hidden для карточки и WebkitAppearance: 'none' для input */}
-      <div className="card" style={{marginTop:'var(--s4)', overflow: 'hidden'}}>
-        <div className="card-h"><span className="card-t" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><ShieldAlert size={18} style={{ color: 'var(--red)' }} /> Страхование ОСАГО</span></div>
-        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflow: 'hidden' }}>
-          <label className="inp-label">Дата окончания полиса</label>
-          <input 
-            className="inp" 
-            type="date" 
-            value={userData.insurance_expiry} 
-            onChange={e => {
-              const updated = { ...userData, insurance_expiry: e.target.value };
-              setUserData(updated);
-              updateProfile(updated);
-            }} 
-            style={{ width: '100%', boxSizing: 'border-box', margin: 0, WebkitAppearance: 'none', backgroundClip: 'padding-box' }}
-          />
+          <div className="frow" style={{ gap: '10px' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <input className="inp" type="number" style={{ width: '100%', boxSizing: 'border-box', padding: '0 12px' }} value={userData.car.year} onChange={e => setUserData({...userData, car: {...userData.car, year: e.target.value}})} placeholder="Год" />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <input className="inp" type="text" style={{ width: '100%', boxSizing: 'border-box', padding: '0 12px' }} value={userData.car.engine_volume} onChange={e => setUserData({...userData, car: {...userData.car, engine_volume: e.target.value}})} placeholder="Объем" />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <input className="inp" type="number" style={{ width: '100%', boxSizing: 'border-box', padding: '0 12px' }} value={userData.car.mileage} onChange={e => setUserData({...userData, car: {...userData.car, mileage: e.target.value}})} placeholder="Пробег" />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <input className="inp" type="text" style={{ width: '100%', boxSizing: 'border-box', textTransform: 'uppercase' }} value={userData.car.vin_code} onChange={e => setUserData({...userData, car: {...userData.car, vin_code: e.target.value.toUpperCase()}})} placeholder="VIN" />
+          </div>
+
         </div>
       </div>
 
-      {/* ИСПРАВЛЕНО: Добавлен overflow: hidden для карточки и WebkitAppearance: 'none' для select */}
-      <div className="card" style={{marginTop:'var(--s4)', overflow: 'hidden'}}>
-        <div className="card-h"><span className="card-t" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Wrench size={18} style={{ color: 'var(--primary)' }} /> Обслуживание (ТО)</span></div>
-        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflow: 'hidden' }}>
-          <label className="inp-label">Периодичность (интервал)</label>
-          <select 
-            className="inp" 
-            value={userData.service_interval}
-            onChange={e => {
-              const updated = { ...userData, service_interval: Number(e.target.value) };
-              setUserData(updated);
-              updateProfile(updated);
-            }}
-            style={{ width: '100%', boxSizing: 'border-box', margin: 0, WebkitAppearance: 'none', backgroundClip: 'padding-box' }}
-          >
-            {[5000, 6000, 7000, 8000, 9000, 10000, 12000, 15000].map(val => (
-              <option key={val} value={val}>Каждые {val.toLocaleString()} км</option>
-            ))}
-          </select>
+      {/* СТРАХОВАНИЕ ОСАГО */}
+      <div style={{ marginBottom: 'var(--s6)' }}>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--s3)', color: 'var(--muted)' }}>
+          <ShieldAlert size={16} /> Страхование ОСАГО
+        </h3>
+        <div className="card" style={{ overflow: 'hidden' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflow: 'hidden' }}>
+            <label className="inp-label" style={{ fontSize: '11px', marginBottom: '4px' }}>Дата окончания полиса</label>
+            <input 
+              className="inp" 
+              type="date" 
+              value={userData.insurance_expiry} 
+              onChange={e => setUserData({ ...userData, insurance_expiry: e.target.value })} 
+              style={{ width: '100%', boxSizing: 'border-box', margin: 0, WebkitAppearance: 'none', backgroundClip: 'padding-box' }}
+            />
+          </div>
         </div>
       </div>
 
+      {/* ОБСЛУЖИВАНИЕ ТО */}
+      <div style={{ marginBottom: 'var(--s6)' }}>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--s3)', color: 'var(--muted)' }}>
+          <Wrench size={16} /> Обслуживание (ТО)
+        </h3>
+        <div className="card" style={{ overflow: 'hidden' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflow: 'hidden' }}>
+            <label className="inp-label" style={{ fontSize: '11px', marginBottom: '4px' }}>Периодичность (интервал)</label>
+            <select 
+              className="inp" 
+              value={userData.service_interval}
+              onChange={e => setUserData({ ...userData, service_interval: Number(e.target.value) })}
+              style={{ width: '100%', boxSizing: 'border-box', margin: 0, WebkitAppearance: 'none', backgroundClip: 'padding-box' }}
+            >
+              {[5000, 6000, 7000, 8000, 9000, 10000, 12000, 15000].map(val => (
+                <option key={val} value={val}>Каждые {val.toLocaleString()} км</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* ГЛАВНАЯ КНОПКА СОХРАНЕНИЯ */}
+      <button 
+        className="btn btn-primary btn-full" 
+        onClick={handleSaveAll} 
+        disabled={saving}
+        style={{ height: '60px', fontSize: '16px', borderRadius: '16px', fontWeight: 800, marginBottom: 'var(--s6)' }}
+      >
+        {saving ? <Loader2 className="animate-spin" /> : 'Сохранить изменения'}
+      </button>
+
+      {/* ГАЛЕРЕЯ (Оставил в самом низу) */}
       <div className="card" style={{marginTop:'var(--s4)'}}>
         <div className="card-h">
-          <span className="card-t">Галерея</span>
+          <span className="card-t">Галерея авто</span>
           <span className="pg-sub">{carPhotos.length} / 10</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginTop: 'var(--s2)' }}>
@@ -375,23 +385,6 @@ export default function ProfileClient() {
         </div>
       </div>
 
-      <div className="card" style={{marginTop:'var(--s4)'}}>
-        <div className="card-h"><span className="card-t">Настройки</span></div>
-        <div className="tog-row" onClick={() => setShowCityPicker(true)} style={{ cursor: 'pointer', padding:'12px 0', borderBottom:'1px solid var(--divider)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}>
-            <MapPin size={18} className="c-muted" />
-            <div className="tog-info">
-              <h4>Ваш город</h4>
-              <p style={{color:'var(--primary)'}}>{userData.city}</p>
-            </div>
-          </div>
-          <ChevronRight size={18} className="c-muted" />
-        </div>
-      </div>
-
-      <button className="btn btn-outline btn-full" onClick={handleLogout} style={{ color: 'var(--red)', borderColor: 'rgba(255,75,75,0.2)', height: '54px', marginTop: 'var(--s6)' }}>
-        <LogOut size={18} /> Выйти
-      </button>
     </main>
   )
 }
