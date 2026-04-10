@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { X, Fuel, Wrench, AlertCircle, ShoppingBag, Mic, Square } from 'lucide-react'
+import { X, Fuel, Wrench, AlertCircle, ShoppingBag, Mic, Square, Loader2 } from 'lucide-react'
 
-export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd, onOptimisticEdit, editingItem }: any) {
+export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingItem }: any) {
   const supabase = createClient()
   const [isListening, setIsListening] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const recognitionRef = useRef<any>(null)
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null)
   
@@ -17,7 +18,6 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd, onO
     mileage: ''
   })
 
-  // Подхватываем данные, если мы редактируем старую запись
   useEffect(() => {
     if (isOpen) {
       if (editingItem) {
@@ -88,7 +88,6 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd, onO
       stopVoiceInput()
       return
     }
-
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) return alert('Ваш браузер не поддерживает голосовой ввод')
 
@@ -126,18 +125,20 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd, onO
 
       setForm(prev => ({ ...prev, description: text.charAt(0).toUpperCase() + text.slice(1) }))
     }
-
     recognition.start()
   }
 
+  // ЖЕЛЕЗОБЕТОННОЕ СОХРАНЕНИЕ
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.amount) return
     
+    setIsSaving(true)
+    
     const amountVal = parseFloat(form.amount)
     const descriptionVal = form.description.trim() || null
     const mileageVal = form.mileage ? parseInt(form.mileage) : null
-    const now = editingItem ? editingItem.date : new Date().toISOString() // Сохраняем оригинальную дату при редактировании
+    const now = editingItem ? editingItem.date : new Date().toISOString() 
 
     const payload = {
       amount: amountVal,
@@ -147,24 +148,31 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd, onO
       date: now
     }
 
-    // Если мы редактируем
-    if (editingItem) {
-      onOptimisticEdit({ ...editingItem, ...payload })
-      onClose()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        await supabase.from('expenses').update(payload).eq('id', editingItem.id)
-      }
-    } 
-    // Если мы создаем новый
-    else {
-      onOptimisticAdd({ ...payload })
-      onClose()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        await supabase.from('expenses').insert({ ...payload, user_id: user.id })
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (user) {
+      if (editingItem) {
+        // ОБНОВЛЕНИЕ в базе
+        const { error } = await supabase.from('expenses').update(payload).eq('id', editingItem.id).eq('user_id', user.id)
+        if (error) {
+          alert('Ошибка обновления: ' + error.message)
+        } else {
+          onClose()
+          onSuccess() // Командуем странице перекачать данные
+        }
+      } else {
+        // ДОБАВЛЕНИЕ в базу
+        const { error } = await supabase.from('expenses').insert({ ...payload, user_id: user.id })
+        if (error) {
+          alert('Ошибка сохранения: ' + error.message)
+        } else {
+          setForm({ amount: '', category: 'fuel', description: '', mileage: '' })
+          onClose()
+          onSuccess() // Командуем странице перекачать данные
+        }
       }
     }
+    setIsSaving(false)
   }
 
   if (!isOpen) return null
@@ -251,8 +259,8 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd, onO
           </div>
 
           <div style={{ marginTop: 'auto', paddingTop: 'var(--s4)' }}>
-            <button className="btn btn-primary btn-full" type="submit" style={{ height: '56px', fontSize: '15px', fontWeight: 800, borderRadius: '16px' }}>
-              {editingItem ? 'Сохранить изменения' : 'Сохранить запись'}
+            <button className="btn btn-primary btn-full" type="submit" disabled={isSaving} style={{ height: '56px', fontSize: '15px', fontWeight: 800, borderRadius: '16px' }}>
+              {isSaving ? <Loader2 className="animate-spin" /> : editingItem ? 'Сохранить изменения' : 'Сохранить запись'}
             </button>
           </div>
         </form>

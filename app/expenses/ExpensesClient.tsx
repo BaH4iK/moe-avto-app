@@ -20,6 +20,7 @@ export default function ExpensesClient() {
   const [touchStartX, setTouchStartX] = useState<number | null>(null)
   const [editingExpense, setEditingExpense] = useState<any>(null)
 
+  // Функция загрузки данных напрямую из Supabase
   const fetchExpenses = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
@@ -38,20 +39,6 @@ export default function ExpensesClient() {
     fetchExpenses()
   }, [fetchExpenses])
 
-  const handleOptimisticAdd = (newExpense: any) => {
-    setHistory(prev => [{
-      ...newExpense,
-      id: 'temp-' + Date.now(),
-      isOptimistic: true 
-    }, ...prev])
-    setTimeout(fetchExpenses, 2500)
-  }
-
-  const handleOptimisticEdit = (updatedExpense: any) => {
-    setHistory(prev => prev.map(item => item.id === updatedExpense.id ? { ...item, ...updatedExpense, isOptimistic: true } : item))
-    setTimeout(fetchExpenses, 2500)
-  }
-
   // Обработчики свайпа
   const handleTouchStart = (e: React.TouchEvent, id: string) => {
     setTouchStartX(e.touches[0].clientX)
@@ -62,21 +49,30 @@ export default function ExpensesClient() {
       const touchEndX = e.changedTouches[0].clientX
       const diff = touchStartX - touchEndX
 
-      if (diff > 50) { // Свайп влево
+      if (diff > 50) { 
         setSwipedItemId(id)
-      } else if (diff < -50) { // Свайп вправо
+      } else if (diff < -50) { 
         if (swipedItemId === id) setSwipedItemId(null)
       }
     }
     setTouchStartX(null)
   }
 
-  // Удаление и Редактирование
+  // ЖЕЛЕЗОБЕТОННОЕ УДАЛЕНИЕ
   const handleDeleteClick = async (id: string) => {
     if (window.confirm('Точно удалить этот расход?')) {
-      setHistory(prev => prev.filter(i => i.id !== id))
-      await supabase.from('expenses').delete().eq('id', id)
-      setSwipedItemId(null)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        // Удаляем из базы с проверкой user_id для безопасности
+        const { error } = await supabase.from('expenses').delete().eq('id', id).eq('user_id', user.id)
+        
+        if (error) {
+          alert('Ошибка при удалении: ' + error.message)
+        } else {
+          setSwipedItemId(null)
+          fetchExpenses() // Обновляем список из базы
+        }
+      }
     }
   }
 
@@ -134,7 +130,6 @@ export default function ExpensesClient() {
           filteredHistory.map((item) => (
             <div key={item.id} style={{ position: 'relative', borderRadius: '24px', overflow: 'hidden', background: 'var(--surface2)' }}>
               
-              {/* Кнопки под карточкой (Карандаш и Корзина) */}
               <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '120px', display: 'flex' }}>
                 <button onClick={() => handleEditClick(item)} style={{ flex: 1, background: '#ffa726', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                   <Pencil size={20} />
@@ -144,7 +139,6 @@ export default function ExpensesClient() {
                 </button>
               </div>
 
-              {/* Сама карточка расхода */}
               <div 
                 className="rcard" 
                 onTouchStart={e => handleTouchStart(e, item.id)}
@@ -155,11 +149,10 @@ export default function ExpensesClient() {
                   margin: 0, 
                   position: 'relative',
                   zIndex: 2,
-                  background: 'var(--bg)', // Чтобы кнопки не просвечивали
+                  background: 'var(--bg)',
                   border: '1px solid var(--divider)',
                   alignItems: 'flex-start', 
-                  padding: '16px',
-                  opacity: item.isOptimistic ? 0.5 : 1,
+                  padding: '16px'
                 }}
               >
                 <div className="rcard-ava" style={{ background: 'var(--surface2)', marginTop: '4px' }}>{getIcon(item.category)}</div>
@@ -188,8 +181,7 @@ export default function ExpensesClient() {
       <AddExpenseDrawer 
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)} 
-        onOptimisticAdd={handleOptimisticAdd}
-        onOptimisticEdit={handleOptimisticEdit}
+        onSuccess={fetchExpenses} // Передаем функцию обновления
         editingItem={editingExpense}
       />
     </main>
