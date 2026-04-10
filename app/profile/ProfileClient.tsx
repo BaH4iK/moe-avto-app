@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { 
   MapPin, Bell, LogOut, Camera, ChevronRight, Save, Loader2, X, Search, 
-  Car, UserCircle2, PlusCircle, Trash2, CheckCircle2 
+  Car, UserCircle2, PlusCircle, Trash2, CheckCircle2, ShieldAlert, Wrench
 } from 'lucide-react'
 
 const ALL_CITIES = [
@@ -48,6 +48,8 @@ export default function ProfileClient() {
     name: string;
     city: string;
     avatarUrl: string | null;
+    insurance_expiry?: string;
+    service_interval?: number;
     car: {
       brand: string;
       model: string;
@@ -60,6 +62,8 @@ export default function ProfileClient() {
     name: 'Водитель',
     city: 'Не указан',
     avatarUrl: null,
+    insurance_expiry: '',
+    service_interval: 10000,
     car: { 
       brand: '—', 
       model: '—', 
@@ -86,6 +90,8 @@ export default function ProfileClient() {
           name: profileRes.data.full_name || 'Водитель',
           city: profileRes.data.city || 'Севастополь',
           avatarUrl: profileRes.data.avatar_url || null,
+          insurance_expiry: profileRes.data.insurance_expiry || '',
+          service_interval: profileRes.data.service_interval || 10000,
           car: {
             brand: profileRes.data.car_brand || '—',
             model: profileRes.data.car_model || '—',
@@ -114,6 +120,8 @@ export default function ProfileClient() {
     const { error } = await supabase.from('profiles').upsert({
       id: user.id,
       city: newData.city,
+      insurance_expiry: newData.insurance_expiry || null,
+      service_interval: newData.service_interval,
       car_brand: newData.car.brand,
       car_model: newData.car.model,
       car_year: parseInt(newData.car.year) || null,
@@ -249,40 +257,40 @@ export default function ProfileClient() {
 
       <div className="card">
         <div className="card-h">
-          <span className="card-t">Мой автомобиль</span>
+          <span className="card-t" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Car size={18} className="c-primary" /> Мой автомобиль</span>
           <button className="btn btn-ghost btn-sm" onClick={() => setIsEditingCar(!isEditingCar)}>{isEditingCar ? 'Отмена' : 'Изменить'}</button>
         </div>
         
         {isEditingCar ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s3)' }}>
             <div className="frow" style={{ gap: '10px' }}>
-              <div className="ffield" style={{flex: 1}}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <label className="inp-label">Марка</label>
                 <input className="inp" value={userData.car.brand} onChange={e => setUserData({...userData, car: {...userData.car, brand: e.target.value}})} />
               </div>
-              <div className="ffield" style={{flex: 1}}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <label className="inp-label">Модель</label>
                 <input className="inp" value={userData.car.model} onChange={e => setUserData({...userData, car: {...userData.car, model: e.target.value}})} />
               </div>
             </div>
 
             <div className="frow" style={{ gap: '10px' }}>
-              <div className="ffield" style={{flex: 1}}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <label className="inp-label">Год выпуска</label>
                 <input className="inp" type="number" placeholder="2020" value={userData.car.year} onChange={e => setUserData({...userData, car: {...userData.car, year: e.target.value}})} />
               </div>
-              <div className="ffield" style={{flex: 1}}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <label className="inp-label">Объем двигателя</label>
                 <input className="inp" type="text" placeholder="Напр. 2.0" value={userData.car.engine_volume} onChange={e => setUserData({...userData, car: {...userData.car, engine_volume: e.target.value}})} />
               </div>
             </div>
 
             <div className="frow" style={{ gap: '10px' }}>
-              <div className="ffield" style={{flex: 1}}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <label className="inp-label">Пробег (км)</label>
                 <input className="inp" type="number" placeholder="0" value={userData.car.mileage} onChange={e => setUserData({...userData, car: {...userData.car, mileage: e.target.value}})} />
               </div>
-              <div className="ffield" style={{flex: 1}}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <label className="inp-label">VIN-код</label>
                 <input className="inp" type="text" placeholder="XTA..." value={userData.car.vin_code} onChange={e => setUserData({...userData, car: {...userData.car, vin_code: e.target.value.toUpperCase()}})} style={{ textTransform: 'uppercase' }} />
               </div>
@@ -291,8 +299,7 @@ export default function ProfileClient() {
             <button className="btn btn-primary btn-full" onClick={() => { setIsEditingCar(false); updateProfile(userData); }} disabled={saving}>Сохранить</button>
           </div>
         ) : (
-          <div className="car-mini active" style={{display:'flex', alignItems:'center', gap:'12px'}}>
-            <div className="rem-ico o" style={{background:'var(--primary-hl)', color:'var(--primary)'}}><Car size={20} /></div>
+          <div className="car-mini active" style={{display:'flex', alignItems:'center', gap:'12px', background: 'none', border: 'none', padding: 0}}>
             <div style={{flex:1}}>
               <h4>{userData.car.brand} {userData.car.model} {userData.car.engine_volume ? `(${userData.car.engine_volume}л)` : ''}</h4>
               <p className="pg-sub">{userData.car.year !== '—' ? `${userData.car.year} г.в. · ` : ''}{userData.car.mileage} км</p>
@@ -300,6 +307,47 @@ export default function ProfileClient() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* ИСПРАВЛЕНО: Блок ОСАГО без класса ffield, чтобы не ломать 100% ширину карточки */}
+      <div className="card" style={{marginTop:'var(--s4)'}}>
+        <div className="card-h"><span className="card-t" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><ShieldAlert size={18} style={{ color: 'var(--red)' }} /> Страхование ОСАГО</span></div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <label className="inp-label">Дата окончания полиса</label>
+          <input 
+            className="inp" 
+            type="date" 
+            value={userData.insurance_expiry} 
+            onChange={e => {
+              const updated = { ...userData, insurance_expiry: e.target.value };
+              setUserData(updated);
+              updateProfile(updated);
+            }} 
+            style={{ width: '100%' }}
+          />
+        </div>
+      </div>
+
+      {/* ИСПРАВЛЕНО: Блок ТО без класса ffield, чтобы не ломать 100% ширину карточки */}
+      <div className="card" style={{marginTop:'var(--s4)'}}>
+        <div className="card-h"><span className="card-t" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Wrench size={18} style={{ color: 'var(--primary)' }} /> Обслуживание (ТО)</span></div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <label className="inp-label">Периодичность (интервал)</label>
+          <select 
+            className="inp" 
+            value={userData.service_interval}
+            onChange={e => {
+              const updated = { ...userData, service_interval: Number(e.target.value) };
+              setUserData(updated);
+              updateProfile(updated);
+            }}
+            style={{ width: '100%' }}
+          >
+            {[5000, 6000, 7000, 8000, 9000, 10000, 12000, 15000].map(val => (
+              <option key={val} value={val}>Каждые {val.toLocaleString()} км</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="card" style={{marginTop:'var(--s4)'}}>

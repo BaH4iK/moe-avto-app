@@ -14,18 +14,17 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
     mileage: ''
   })
 
+  // ИСПРАВЛЕНО: Добавлены новые слова в категорию Штрафы
   const categories = [
     { id: 'fuel', label: 'Топливо', icon: <Fuel size={18} />, color: 'var(--primary)', keywords: ['заправ', 'бензин', 'топливо', 'газ', 'солярка', 'литр'] },
-    { id: 'service', label: 'Сервис', icon: <Wrench size={18} />, color: '#00c853', keywords: ['ремонт', 'сервис', 'мастер', 'сто', 'починил', 'замена', 'масл'] },
-    { id: 'fine', label: 'Штраф', icon: <AlertCircle size={18} />, color: 'var(--red)', keywords: ['штраф', 'гаи', 'гибдд', 'камера', 'нарушен'] },
-    { id: 'spare_parts', label: 'Запчасти', icon: <ShoppingBag size={18} />, color: '#2979ff', keywords: ['запчаст', 'деталь', 'фильтр', 'колодк', 'купил', 'магазин'] },
+    { id: 'service', label: 'Сервис', icon: <Wrench size={18} />, color: '#00c853', keywords: ['ремонт', 'сервис', 'мастер', 'сто', 'починил', 'замена', 'масл', 'колодк', 'шин'] },
+    { id: 'fine', label: 'Штраф', icon: <AlertCircle size={18} />, color: 'var(--red)', keywords: ['штраф', 'гаи', 'гибдд', 'камера', 'нарушен', 'сплошн', 'ремень', 'скорост', 'превышен', 'парковк', 'стоп', 'лишен'] },
+    { id: 'spare_parts', label: 'Запчасти', icon: <ShoppingBag size={18} />, color: '#2979ff', keywords: ['запчаст', 'деталь', 'фильтр', 'купил', 'магазин'] },
   ]
 
-  // ИСПРАВЛЕНО: Умный математический парсер
   const extractAmount = (text: string) => {
     let t = ' ' + text.toLowerCase() + ' ';
 
-    // 1. Сленг в цифры
     t = t.replace(/ полторы\s*(тысячи|тысяч|тыщи|тыщ|к|k)? /g, ' 1500 ');
     t = t.replace(/ полторушк[ауие] /g, ' 1500 ');
     t = t.replace(/ двушк[ауие] /g, ' 2000 ');
@@ -34,7 +33,6 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
     t = t.replace(/ пятер[ауке] /g, ' 5000 ');
     t = t.replace(/ (рубль|рублей|рубля|р) /g, ' ');
 
-    // 2. Текстовые числа
     const dict = {
       'ноль': 0, 'один': 1, 'одна': 1, 'два': 2, 'две': 2, 'три': 3,
       'четыре': 4, 'пять': 5, 'шесть': 6, 'семь': 7, 'восемь': 8, 'девять': 9,
@@ -45,20 +43,16 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
       t = t.replace(new RegExp(`(^|\\s)${word}(?=\\s|$)`, 'g'), `$1${num}`);
     }
 
-    // 3. Множители (например: "3 тысячи" -> 3000)
     t = t.replace(/(\d+)\s*(тысяч[аиу]?|тыщ[аиу]?|к|k)(?=\s|$)/gi, (match, p1) => {
       return String(parseInt(p1) * 1000);
     });
 
-    // 4. Одиночная "тыща" -> 1000
     t = t.replace(/(^|\s)(тысяч[аиу]?|тыщ[аиу]?)(?=\s|$)/g, '$1 1000 ');
 
-    // 5. Обработка разговорных "две 900" -> 2900, "3 500" -> 3500
     t = t.replace(/(^|\s)([1-9])\s+([1-9]00)(?=\s|$)/g, (match, space, p1, p2) => {
        return space + String(parseInt(p1) * 1000 + parseInt(p2));
     });
 
-    // 6. Суммируем все оставшиеся цифры ("1000" и "400" -> 1400)
     let currentSum = 0;
     const tokens = t.split(/\s+/).filter(Boolean);
     for (let tok of tokens) {
@@ -146,12 +140,15 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
+      {/* ИСПРАВЛЕНО: Сделал шторку выше (minHeight: '65vh') и добавил огромный отступ снизу (paddingBottom: 100px), чтобы кнопка гарантированно была над Bottom Nav */}
       <div className="card" style={{ 
-        width: '100%', maxWidth: '520px', maxHeight: '90vh', 
+        width: '100%', maxWidth: '520px', 
+        minHeight: '65vh', maxHeight: '90vh', 
         overflowY: 'auto', borderRadius: '24px 24px 0 0', 
-        padding: 'var(--s6) var(--s6) calc(40px + env(safe-area-inset-bottom))', 
+        padding: 'var(--s6) var(--s6) calc(100px + env(safe-area-inset-bottom))', 
         background: 'var(--bg)', borderTop: '1px solid var(--divider)',
-        boxShadow: '0 -10px 50px rgba(0,0,0,0.5)'
+        boxShadow: '0 -10px 50px rgba(0,0,0,0.5)',
+        display: 'flex', flexDirection: 'column'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s6)' }}>
           <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Новый расход</h2>
@@ -185,7 +182,7 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
           </span>
         </button>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s5)' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s5)', flex: 1 }}>
           <div className="ffield">
             <label className="inp-label">Сумма (₽) *</label>
             <input 
@@ -215,9 +212,11 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
             <input className="inp" placeholder="Напр. Лукойл АИ-95" value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
           </div>
 
-          <button className="btn btn-primary btn-full" type="submit" style={{ height: '56px', fontSize: '15px', fontWeight: 800, borderRadius: '16px' }}>
-            Сохранить запись
-          </button>
+          <div style={{ marginTop: 'auto', paddingTop: 'var(--s4)' }}>
+            <button className="btn btn-primary btn-full" type="submit" style={{ height: '56px', fontSize: '15px', fontWeight: 800, borderRadius: '16px' }}>
+              Сохранить запись
+            </button>
+          </div>
         </form>
       </div>
       
