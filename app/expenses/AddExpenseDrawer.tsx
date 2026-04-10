@@ -131,14 +131,13 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
   // ЖЕЛЕЗОБЕТОННОЕ СОХРАНЕНИЕ В БАЗУ
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.amount) return
+    if (!form.amount || isSaving) return
     
     setIsSaving(true)
     
     const amountVal = parseFloat(form.amount)
     const descriptionVal = form.description.trim() || null
     const mileageVal = form.mileage ? parseInt(form.mileage) : null
-    // При редактировании оставляем старую дату, при создании — новую
     const dateVal = editingItem ? editingItem.date : new Date().toISOString() 
 
     const payload = {
@@ -153,30 +152,22 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
     
     if (user) {
       if (editingItem) {
-        // ОБНОВЛЕНИЕ СУЩЕСТВУЮЩЕЙ ЗАПИСИ
-        const { error } = await supabase
-          .from('expenses')
-          .update(payload)
-          .eq('id', editingItem.id)
-          .eq('user_id', user.id)
-
+        // ОБНОВЛЕНИЕ
+        const { error } = await supabase.from('expenses').update(payload).eq('id', editingItem.id).eq('user_id', user.id)
         if (error) {
           alert('Ошибка при обновлении: ' + error.message)
         } else {
-          onSuccess() // Вызываем обновление списка в главном компоненте
+          onSuccess() 
           onClose()
         }
       } else {
-        // СОЗДАНИЕ НОВОЙ ЗАПИСИ
-        const { error } = await supabase
-          .from('expenses')
-          .insert({ ...payload, user_id: user.id })
-
+        // СОЗДАНИЕ
+        const { error } = await supabase.from('expenses').insert({ ...payload, user_id: user.id })
         if (error) {
           alert('Ошибка при сохранении: ' + error.message)
         } else {
           setForm({ amount: '', category: 'fuel', description: '', mileage: '' })
-          onSuccess() // Вызываем обновление списка
+          onSuccess() 
           onClose()
         }
       }
@@ -274,6 +265,14 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
           </div>
         </form>
       </div>
+      
+      <style jsx>{`
+        @keyframes pulse {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.02); opacity: 0.8; }
+          100% { transform: scale(1); }
+        }
+      `}</style>
     </div>
   )
 }
