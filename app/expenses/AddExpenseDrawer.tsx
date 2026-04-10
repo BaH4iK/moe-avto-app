@@ -14,7 +14,6 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
     mileage: ''
   })
 
-  // ИСПРАВЛЕНО: Добавлены новые слова в категорию Штрафы
   const categories = [
     { id: 'fuel', label: 'Топливо', icon: <Fuel size={18} />, color: 'var(--primary)', keywords: ['заправ', 'бензин', 'топливо', 'газ', 'солярка', 'литр'] },
     { id: 'service', label: 'Сервис', icon: <Wrench size={18} />, color: '#00c853', keywords: ['ремонт', 'сервис', 'мастер', 'сто', 'починил', 'замена', 'масл', 'колодк', 'шин'] },
@@ -25,6 +24,16 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
   const extractAmount = (text: string) => {
     let t = ' ' + text.toLowerCase() + ' ';
 
+    // 1. Защита от диктофона iOS: отрезаем прилипшую марку бензина (например, "3.658-95" -> убираем "-95")
+    t = t.replace(/-(92|95|98|100)\b/g, '');
+    
+    // 2. Убираем отдельно стоящие марки топлива, чтобы они не приплюсовались к сумме ("бензин 95 на 2000")
+    t = t.replace(/(бензин|аи|топливо|дизель)\s*(92|95|98|100)\b/gi, '$1');
+
+    // 3. Склеиваем тысячи: убираем точки и пробелы, которые ставит диктофон (2.000 -> 2000, 3 658 -> 3658)
+    t = t.replace(/(\d)[\.\s](\d{3})(?!\d)/g, '$1$2');
+
+    // Дальше идет твоя оригинальная логика сленга
     t = t.replace(/ полторы\s*(тысячи|тысяч|тыщи|тыщ|к|k)? /g, ' 1500 ');
     t = t.replace(/ полторушк[ауие] /g, ' 1500 ');
     t = t.replace(/ двушк[ауие] /g, ' 2000 ');
@@ -33,7 +42,7 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
     t = t.replace(/ пятер[ауке] /g, ' 5000 ');
     t = t.replace(/ (рубль|рублей|рубля|р) /g, ' ');
 
-    const dict = {
+    const dict: Record<string, number> = {
       'ноль': 0, 'один': 1, 'одна': 1, 'два': 2, 'две': 2, 'три': 3,
       'четыре': 4, 'пять': 5, 'шесть': 6, 'семь': 7, 'восемь': 8, 'девять': 9,
       'десять': 10, 'сто': 100, 'двести': 200, 'триста': 300, 'четыреста': 400,
@@ -53,6 +62,7 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
        return space + String(parseInt(p1) * 1000 + parseInt(p2));
     });
 
+    // Твой цикл сложения (теперь он видит чистые цифры)
     let currentSum = 0;
     const tokens = t.split(/\s+/).filter(Boolean);
     for (let tok of tokens) {
@@ -70,7 +80,6 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
     const recognition = new SpeechRecognition()
     recognition.lang = 'ru-RU'
     
-    // ИСПРАВЛЕНО: Включаем непрерывное распознавание
     recognition.continuous = true
     recognition.interimResults = true
 
@@ -83,7 +92,6 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
 
     recognition.onstart = () => {
       setIsListening(true)
-      // Если включил и 4 секунды молчит вообще - вырубаем
       silenceTimer = setTimeout(stopRec, 4000)
     }
 
@@ -93,9 +101,7 @@ export default function AddExpenseDrawer({ isOpen, onClose, onOptimisticAdd }: a
     }
 
     recognition.onresult = (event: any) => {
-      // Сбрасываем таймер при каждом распознанном слове
       clearTimeout(silenceTimer)
-      // Если после последнего слова прошло 3 секунды - выключаем
       silenceTimer = setTimeout(stopRec, 3000)
 
       let text = ''

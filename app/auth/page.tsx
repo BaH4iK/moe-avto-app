@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { 
@@ -9,7 +9,6 @@ import {
 } from 'lucide-react'
 
 export default function AuthPage() {
-  // Состояния формы
   const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -17,14 +16,22 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
   
-  // Состояния загрузки и ошибок
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
   
   const router = useRouter()
   const supabase = createClient()
 
-  // Перевод ошибок Supabase на нормальный русский
+  // ВОССТАНОВЛЕНИЕ ПОЧТЫ ИЗ ПАМЯТИ
+  // При загрузке страницы проверяем, просил ли юзер запомнить его
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('moe_avto_remembered_email')
+    if (savedEmail) {
+      setEmail(savedEmail)
+      setRememberMe(true)
+    }
+  }, [])
+
   const translateError = (msg: string) => {
     if (msg.includes('Email rate limit exceeded')) return 'Слишком много попыток. Подождите 15 минут.'
     if (msg.includes('Invalid login credentials')) return 'Неверный email или пароль.'
@@ -41,13 +48,13 @@ export default function AuthPage() {
     // ─── 1. ВОССТАНОВЛЕНИЕ ПАРОЛЯ ───
     if (mode === 'forgot') {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/update-password`, // Если добавишь страницу смены пароля
+        redirectTo: `${window.location.origin}/auth/update-password`,
       })
       if (error) {
         setMessage({ type: 'error', text: translateError(error.message) })
       } else {
         setMessage({ type: 'success', text: 'Ссылка для сброса пароля отправлена на ваш Email!' })
-        setTimeout(() => setMode('signin'), 3000) // Возвращаем на логин через 3 сек
+        setTimeout(() => setMode('signin'), 3000)
       }
       setLoading(false)
       return
@@ -66,10 +73,13 @@ export default function AuthPage() {
       if (error) {
         setMessage({ type: 'error', text: translateError(error.message) })
       } else {
-        // Принудительно выходим, чтобы пользователь сам ввел логин и пароль
+        // СОХРАНЕНИЕ ПОЧТЫ В БД: Сразу записываем email в таблицу profiles
+        if (data?.user) {
+          await supabase.from('profiles').update({ email: email }).eq('id', data.user.id)
+        }
+
         await supabase.auth.signOut()
         
-        // Сбрасываем поля и переключаем на Вход
         setPassword('')
         setConfirmPassword('')
         setMode('signin')
@@ -87,14 +97,22 @@ export default function AuthPage() {
         setMessage({ type: 'error', text: translateError(error.message) })
       } else if (data.user) {
         
-        // Проверяем, заполнил ли он анкету (онбординг)
+        // РАБОЧАЯ ГАЛОЧКА: Сохраняем или удаляем почту из памяти телефона
+        if (rememberMe) {
+          localStorage.setItem('moe_avto_remembered_email', email)
+        } else {
+          localStorage.removeItem('moe_avto_remembered_email')
+        }
+
+        // СОХРАНЕНИЕ ПОЧТЫ В БД: Дублируем email в profiles при входе на всякий случай
+        await supabase.from('profiles').update({ email: email }).eq('id', data.user.id)
+        
         const { data: profile } = await supabase
           .from('profiles')
           .select('onboarded')
           .eq('id', data.user.id)
           .single()
 
-        // Используем window.location.replace для жесткой перезагрузки и обхода кэша роутера
         if (profile?.onboarded) {
           window.location.replace('/dashboard')
         } else {
@@ -105,7 +123,6 @@ export default function AuthPage() {
     }
   }
 
-  // Вспомогательные функции рендера
   const getTitle = () => {
     if (mode === 'signup') return 'Регистрация'
     if (mode === 'forgot') return 'Сброс пароля'
@@ -121,7 +138,6 @@ export default function AuthPage() {
   return (
     <main className="page active" style={{ justifyContent: 'center', minHeight: '100vh', padding: 'var(--s6)' }}>
       
-      {/* ШАПКА */}
       <div style={{ textAlign: 'center', marginBottom: 'var(--s8)' }}>
         <div className="rem-ico o" style={{ width: 64, height: 64, margin: '0 auto var(--s4)' }}>
           {mode === 'forgot' ? <KeyRound size={32} /> : <LogIn size={32} />}
@@ -130,10 +146,8 @@ export default function AuthPage() {
         <p className="pg-sub">{getSubtitle()}</p>
       </div>
 
-      {/* ФОРМА */}
       <form onSubmit={handleAuth} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s4)' }}>
         
-        {/* Вывод сообщений (ошибки или успех) */}
         {message.text && (
           <div className={`badge ${message.type === 'error' ? 'br' : 'bg'}`} style={{ padding: 'var(--s3)', width: '100%', justifyContent: 'center', display: 'flex', gap: '8px', fontSize: '12px', textAlign: 'center', whiteSpace: 'normal', lineHeight: 1.4 }}>
             {message.type === 'error' ? <AlertCircle size={16} style={{ flexShrink: 0 }} /> : <MailCheck size={16} style={{ flexShrink: 0 }} />}
@@ -141,7 +155,6 @@ export default function AuthPage() {
           </div>
         )}
 
-        {/* Поле Email (всегда видимо) */}
         <input 
           type="email" 
           className="inp" 
@@ -151,7 +164,6 @@ export default function AuthPage() {
           onChange={e => setEmail(e.target.value)} 
         />
 
-        {/* Поля пароля (скрыты при восстановлении) */}
         {mode !== 'forgot' && (
           <>
             <div style={{ position: 'relative' }}>
@@ -172,7 +184,6 @@ export default function AuthPage() {
               </button>
             </div>
 
-            {/* Подтверждение пароля (только регистрация) */}
             {mode === 'signup' && (
               <input 
                 type="password" 
@@ -184,7 +195,6 @@ export default function AuthPage() {
               />
             )}
             
-            {/* Доп. кнопки для Входа (Запомнить меня + Забыл пароль) */}
             {mode === 'signin' && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '-4px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', color: 'var(--muted)', userSelect: 'none' }}>
@@ -206,7 +216,6 @@ export default function AuthPage() {
           </>
         )}
 
-        {/* Главная кнопка действия */}
         <button 
           className="btn btn-primary btn-full" 
           type="submit" 
@@ -216,7 +225,6 @@ export default function AuthPage() {
           {loading ? 'Обработка...' : mode === 'signup' ? 'Создать аккаунт' : mode === 'forgot' ? 'Отправить ссылку' : 'Войти'}
         </button>
 
-        {/* Переключатель режимов внизу */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {mode === 'signin' ? (
             <button type="button" className="btn btn-ghost btn-full" onClick={() => { setMode('signup'); setMessage({type:'', text:''}); }}>
