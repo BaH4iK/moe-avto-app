@@ -41,7 +41,6 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
     { id: 'spare_parts', label: 'Запчасти', icon: <ShoppingBag size={18} />, color: '#2979ff', keywords: ['запчаст', 'деталь', 'фильтр', 'купил', 'магазин'] },
   ]
 
-  // Твоя логика распознавания чисел и сленга
   const extractAmount = (text: string) => {
     let t = ' ' + text.toLowerCase() + ' ';
     t = t.replace(/-(92|95|98|100)\b/g, '');
@@ -138,20 +137,24 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
     const { data: { user } } = await supabase.auth.getUser()
     
     if (user) {
+      // Явно добавляем user_id в payload, чтобы RLS политики не блокировали обновление
       const payload = {
         amount: parseFloat(form.amount),
         category: form.category,
         description: form.description.trim() || null,
         mileage: form.mileage ? parseInt(form.mileage) : null,
-        date: editingItem ? editingItem.date : new Date().toISOString()
+        date: editingItem ? editingItem.date : new Date().toISOString(),
+        user_id: user.id
       }
 
-      const { error } = editingItem 
-        ? await supabase.from('expenses').update(payload).eq('id', editingItem.id).eq('user_id', user.id)
-        : await supabase.from('expenses').insert({ ...payload, user_id: user.id })
+      const { data, error } = editingItem 
+        ? await supabase.from('expenses').update(payload).eq('id', editingItem.id).eq('user_id', user.id).select()
+        : await supabase.from('expenses').insert(payload).select()
 
       if (error) {
-        alert('Ошибка сохранения: ' + error.message)
+        alert('Ошибка базы данных: ' + error.message)
+      } else if (data && data.length === 0) {
+        alert('Запись не изменена! У вас нет прав на редактирование (RLS).')
       } else {
         await onSuccess() // Жесткое обновление списка из базы
         onClose()

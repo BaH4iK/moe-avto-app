@@ -26,7 +26,10 @@ export default function AuthPage() {
   useEffect(() => {
     async function checkUser() {
       const { data: { session } } = await supabase.auth.getSession()
-      if (session) router.push('/')
+      if (session) {
+        // ИСПРАВЛЕНИЕ 1: Жесткий редирект, если юзер уже залогинен
+        window.location.href = '/'
+      }
     }
     checkUser()
     
@@ -35,7 +38,7 @@ export default function AuthPage() {
       setEmail(savedEmail)
       setRememberMe(true)
     }
-  }, [router, supabase.auth])
+  }, [supabase.auth])
 
   const translateError = (msg: string) => {
     const errors: Record<string, string> = {
@@ -85,8 +88,9 @@ export default function AuthPage() {
           localStorage.removeItem('moe_avto_remembered_email')
         }
         
-        router.push('/')
-        router.refresh()
+        // ИСПРАВЛЕНИЕ 2: Жесткая перезагрузка страницы вместо router.push
+        // Это заставляет браузер 100% сохранить куки сессии до загрузки дашборда
+        window.location.href = '/'
       }
 
       else if (mode === 'forgot') {
