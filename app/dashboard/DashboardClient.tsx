@@ -16,7 +16,7 @@ export default function DashboardClient() {
   const [profile, setProfile] = useState<any>(null)
   const [monthlyExpenses, setMonthlyExpenses] = useState(0)
   const [totalMileage, setTotalMileage] = useState(0)
-  const [monthlyMileage, setMonthlyMileage] = useState(0) // НОВОЕ СВОЙСТВО
+  const [monthlyMileage, setMonthlyMileage] = useState(0)
   const [loading, setLoading] = useState(true)
   const [isStandalone, setIsStandalone] = useState(false)
   
@@ -48,7 +48,8 @@ export default function DashboardClient() {
         }
 
         const now = new Date()
-        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+        // Используем точное время для сравнения
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
 
         const { data: expenses } = await supabase
           .from('expenses')
@@ -58,42 +59,49 @@ export default function DashboardClient() {
         if (expenses) {
           // Расходы за месяц
           const monthTotal = expenses
-            .filter(e => e.date >= firstDayOfMonth)
-            .reduce((acc, curr) => acc + Number(curr.amount), 0)
+            .filter(e => new Date(e.date).getTime() >= firstDayOfMonth)
+            .reduce((acc, curr) => acc + Number(curr.amount || 0), 0)
           setMonthlyExpenses(monthTotal)
 
-          // Максимальный пробег (одометр)
-          const maxMileage = Math.max(...expenses.map(e => e.mileage || 0), profileData?.car_mileage || 0)
+          // Максимальный пробег (из профиля или истории)
+          const maxMileage = Math.max(...expenses.map(e => Number(e.mileage) || 0), Number(profileData?.car_mileage) || 0)
           setTotalMileage(maxMileage)
 
-          // РЕАЛЬНЫЙ ПРОБЕГ ЗА МЕСЯЦ
-          const expensesWithMileage = expenses.filter(e => e.mileage && e.mileage > 0)
+          // РЕАЛЬНЫЙ ПРОБЕГ ЗА МЕСЯЦ (строго по истории записей)
+          const expensesWithMileage = expenses.filter(e => e.mileage && Number(e.mileage) > 0)
           let calcMonthlyMileage = 0
+          
           if (expensesWithMileage.length > 0) {
-            const thisMonth = expensesWithMileage.filter(e => e.date >= firstDayOfMonth)
-            const past = expensesWithMileage.filter(e => e.date < firstDayOfMonth)
+            const thisMonth = expensesWithMileage.filter(e => new Date(e.date).getTime() >= firstDayOfMonth)
+            const past = expensesWithMileage.filter(e => new Date(e.date).getTime() < firstDayOfMonth)
             
             if (thisMonth.length > 0) {
-              const maxThisMonth = Math.max(...thisMonth.map(e => e.mileage))
+              const maxThisMonth = Math.max(...thisMonth.map(e => Number(e.mileage)))
+              
               if (past.length > 0) {
-                const maxPast = Math.max(...past.map(e => e.mileage))
+                // Если есть старые записи, вычитаем прошлый максимум
+                const maxPast = Math.max(...past.map(e => Number(e.mileage)))
                 calcMonthlyMileage = maxThisMonth - maxPast
-              } else {
-                const minThisMonth = Math.min(...thisMonth.map(e => e.mileage))
+              } else if (thisMonth.length > 1) {
+                // Если старых нет, но в этом месяце больше одной записи
+                const minThisMonth = Math.min(...thisMonth.map(e => Number(e.mileage)))
                 calcMonthlyMileage = maxThisMonth - minThisMonth
+              } else {
+                // Если запись за всё время всего одна - дельту посчитать нельзя
+                calcMonthlyMileage = 0
               }
             }
           }
           setMonthlyMileage(Math.max(0, calcMonthlyMileage))
 
-          // Расчет ТО
+          // Расчет ТО (добавлена проверка на 'service' из БД)
           const serviceExpenses = expenses
-            .filter(e => e.category === 'Сервис' || e.category === 'ТО')
+            .filter(e => e.category === 'service' || e.category === 'Сервис' || e.category === 'ТО')
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
           if (serviceExpenses.length > 0 && profileData?.service_interval) {
-            const lastServiceMileage = serviceExpenses[0].mileage || 0
-            const nextServiceAt = lastServiceMileage + profileData.service_interval
+            const lastServiceMileage = Number(serviceExpenses[0].mileage) || 0
+            const nextServiceAt = lastServiceMileage + Number(profileData.service_interval)
             setKmToService(nextServiceAt - maxMileage)
           }
         }

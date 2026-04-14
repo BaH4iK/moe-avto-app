@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense, useRef } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { Space_Grotesk, Inter } from 'next/font/google'
+import { createClient } from '@/lib/supabase/client'
 import './globals.css'
 import Topbar from './components/Topbar'
 import BottomNav from './components/BottomNav'
@@ -31,6 +32,37 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   // ОПРЕДЕЛЯЕМ, НУЖНО ЛИ ПРЯТАТЬ МЕНЮ (Прячем на авторизации, онбординге и корне)
   const hideNav = pathname === '/auth' || pathname === '/onboarding' || pathname === '/'
+
+  // НОВОЕ: КЛИЕНТСКАЯ ПОДДЕРЖКА СЕССИИ ДЛЯ IPHONE (SAFARI / PWA)
+  useEffect(() => {
+    const supabase = createClient()
+
+    // 1. Следим за статусом: если юзера разлогинило (ошибка токена), кидаем на вход
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        if (!window.location.pathname.startsWith('/auth') && window.location.pathname !== '/onboarding') {
+          window.location.href = '/auth'
+        }
+      }
+    })
+
+    // 2. Хак для Safari: при выходе из фонового режима принудительно восстанавливаем сессию
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        await supabase.auth.getSession()
+      }
+    }
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    // 3. Дергаем сессию сразу при старте приложения
+    supabase.auth.getSession()
+
+    return () => {
+      subscription.unsubscribe()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
 
   useEffect(() => {
     setIsNavigating(true)
