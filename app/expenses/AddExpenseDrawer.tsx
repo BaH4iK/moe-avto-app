@@ -18,6 +18,7 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
     mileage: ''
   })
 
+  // Подхватываем данные при редактировании или сбрасываем при создании нового
   useEffect(() => {
     if (isOpen) {
       if (editingItem) {
@@ -40,6 +41,7 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
     { id: 'spare_parts', label: 'Запчасти', icon: <ShoppingBag size={18} />, color: '#2979ff', keywords: ['запчаст', 'деталь', 'фильтр', 'купил', 'магазин'] },
   ]
 
+  // Твоя логика распознавания чисел и сленга
   const extractAmount = (text: string) => {
     let t = ' ' + text.toLowerCase() + ' ';
     t = t.replace(/-(92|95|98|100)\b/g, '');
@@ -128,48 +130,31 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
     recognition.start()
   }
 
-  // ЖЕЛЕЗОБЕТОННОЕ СОХРАНЕНИЕ В БАЗУ
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.amount || isSaving) return
     
     setIsSaving(true)
-    
-    const amountVal = parseFloat(form.amount)
-    const descriptionVal = form.description.trim() || null
-    const mileageVal = form.mileage ? parseInt(form.mileage) : null
-    const dateVal = editingItem ? editingItem.date : new Date().toISOString() 
-
-    const payload = {
-      amount: amountVal,
-      category: form.category,
-      description: descriptionVal,
-      mileage: mileageVal,
-      date: dateVal
-    }
-
     const { data: { user } } = await supabase.auth.getUser()
     
     if (user) {
-      if (editingItem) {
-        // ОБНОВЛЕНИЕ
-        const { error } = await supabase.from('expenses').update(payload).eq('id', editingItem.id).eq('user_id', user.id)
-        if (error) {
-          alert('Ошибка при обновлении: ' + error.message)
-        } else {
-          onSuccess() 
-          onClose()
-        }
+      const payload = {
+        amount: parseFloat(form.amount),
+        category: form.category,
+        description: form.description.trim() || null,
+        mileage: form.mileage ? parseInt(form.mileage) : null,
+        date: editingItem ? editingItem.date : new Date().toISOString()
+      }
+
+      const { error } = editingItem 
+        ? await supabase.from('expenses').update(payload).eq('id', editingItem.id).eq('user_id', user.id)
+        : await supabase.from('expenses').insert({ ...payload, user_id: user.id })
+
+      if (error) {
+        alert('Ошибка сохранения: ' + error.message)
       } else {
-        // СОЗДАНИЕ
-        const { error } = await supabase.from('expenses').insert({ ...payload, user_id: user.id })
-        if (error) {
-          alert('Ошибка при сохранении: ' + error.message)
-        } else {
-          setForm({ amount: '', category: 'fuel', description: '', mileage: '' })
-          onSuccess() 
-          onClose()
-        }
+        await onSuccess() // Жесткое обновление списка из базы
+        onClose()
       }
     }
     setIsSaving(false)

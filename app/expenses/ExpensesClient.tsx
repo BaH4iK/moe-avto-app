@@ -20,7 +20,6 @@ export default function ExpensesClient() {
   const [touchStartX, setTouchStartX] = useState<number | null>(null)
   const [editingExpense, setEditingExpense] = useState<any>(null)
 
-  // Функция жесткой загрузки данных ИЗ БАЗЫ
   const fetchExpenses = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
@@ -39,141 +38,147 @@ export default function ExpensesClient() {
     fetchExpenses()
   }, [fetchExpenses])
 
-  // Обработчики свайпа
-  const handleTouchStart = (e: React.TouchEvent, id: string) => {
-    setTouchStartX(e.touches[0].clientX)
-  }
+  // --- ФУНКЦИИ УДАЛЕНИЯ И РЕДАКТИРОВАНИЯ ---
+  const handleDelete = async (id: string) => {
+    if (confirm('Удалить эту запись?')) {
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', id)
 
-  const handleTouchEnd = (e: React.TouchEvent, id: string) => {
-    if (touchStartX !== null) {
-      const touchEndX = e.changedTouches[0].clientX
-      const diff = touchStartX - touchEndX
-
-      if (diff > 50) { // Свайп влево
-        setSwipedItemId(id)
-      } else if (diff < -50) { // Свайп вправо
-        if (swipedItemId === id) setSwipedItemId(null)
-      }
-    }
-    setTouchStartX(null)
-  }
-
-  // ЖЕЛЕЗОБЕТОННОЕ УДАЛЕНИЕ ИЗ БАЗЫ
-  const handleDeleteClick = async (id: string) => {
-    if (window.confirm('Точно удалить этот расход?')) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        // Удаляем напрямую из Supabase
-        const { error } = await supabase.from('expenses').delete().eq('id', id).eq('user_id', user.id)
-        
-        if (error) {
-          alert('Ошибка при удалении в базе: ' + error.message)
-        } else {
-          setSwipedItemId(null)
-          fetchExpenses() // Скачиваем обновленный список без этой записи
-        }
+      if (!error) {
+        setHistory(prev => prev.filter(item => item.id !== id))
+        setSwipedItemId(null)
+      } else {
+        alert('Ошибка при удалении: ' + error.message)
       }
     }
   }
 
-  const handleEditClick = (item: any) => {
+  const handleEdit = (item: any) => {
     setEditingExpense(item)
     setSwipedItemId(null)
     setIsDrawerOpen(true)
   }
 
-  const catNames: any = { fuel: 'Топливо', service: 'Сервис', fine: 'Штраф', spare_parts: 'Запчасти' }
-  
+  // --- ЛОГИКА СВАЙПА ---
+  const handleTouchStart = (e: React.TouchEvent, id: string) => {
+    setTouchStartX(e.touches[0].clientX)
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent, id: string) => {
+    if (touchStartX === null) return
+    const touchEndX = e.changedTouches[0].clientX
+    const diff = touchStartX - touchEndX
+
+    if (diff > 70) {
+      setSwipedItemId(id)
+    } else if (diff < -70) {
+      setSwipedItemId(null)
+    }
+    setTouchStartX(null)
+  }
+
   const getIcon = (cat: string) => {
     switch (cat) {
-      case 'fuel': return <Fuel size={18} className="c-primary" />
-      case 'service': return <Wrench size={18} style={{ color: '#00c853' }} />
-      case 'fine': return <AlertCircle size={18} style={{ color: 'var(--red)' }} />
-      case 'spare_parts': return <ShoppingBag size={18} style={{ color: '#2979ff' }} />
-      default: return <BarChart3 size={18} />
+      case 'fuel': return <Fuel size={20} color="var(--primary)" />
+      case 'service': return <Wrench size={20} color="#00c853" />
+      case 'fine': return <AlertCircle size={20} color="var(--red)" />
+      default: return <ShoppingBag size={20} color="var(--muted)" />
     }
   }
 
-  const filteredHistory = history.filter(item => {
-    if (activeFilter === 'Все') return true
-    const filterMap: any = { 'Топливо': 'fuel', 'Сервис': 'service', 'Запчасти': 'spare_parts', 'Штрафы': 'fine' }
-    return item.category === filterMap[activeFilter]
-  })
+  const catNames: any = {
+    fuel: 'Топливо',
+    service: 'Сервис',
+    fine: 'Штраф',
+    spare_parts: 'Запчасти'
+  }
 
-  const totalAmount = history.reduce((acc, curr) => acc + Number(curr.amount), 0)
-
-  if (loading && history.length === 0) return null
+  const filteredHistory = activeFilter === 'Все' 
+    ? history 
+    : history.filter(item => catNames[item.category] === activeFilter)
 
   return (
-    <main className="page active">
+    <main className="page active" style={{ paddingBottom: '100px' }}>
       <div className="pg-head">
         <h1 className="pg-title">Расходы</h1>
-        <p className="pg-sub">Общие затраты: <strong>{totalAmount.toLocaleString()} ₽</strong></p>
+        <p className="pg-sub">Ваша история трат</p>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: 'var(--s4)', flexWrap: 'wrap' }}>
-        {['Все', 'Топливо', 'Сервис', 'Запчасти', 'Штрафы'].map(f => (
-          <div key={f} className={`chip ${activeFilter === f ? 'active' : ''}`} onClick={() => setActiveFilter(f)}>{f}</div>
+      <div className="filter-scroll" style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '4px 0 20px', scrollbarWidth: 'none' }}>
+        {['Все', 'Топливо', 'Сервис', 'Штраф'].map(f => (
+          <button 
+            key={f}
+            onClick={() => setActiveFilter(f)}
+            className={`badge ${activeFilter === f ? 'bg' : ''}`}
+            style={{ whiteSpace: 'nowrap', padding: '8px 16px', borderRadius: '12px', border: 'none', cursor: 'pointer' }}
+          >
+            {f}
+          </button>
         ))}
       </div>
 
-      <div className="card" style={{ textAlign: 'center', padding: 'var(--s6) var(--s4)', border: '1px dashed var(--divider)', marginBottom: 'var(--s4)' }}>
-        <button className="btn btn-primary btn-full" style={{ height: '52px' }} onClick={() => { setEditingExpense(null); setIsDrawerOpen(true); }}>
-          <Plus size={18} /> Добавить расход
-        </button>
-      </div>
+      <button 
+        className="btn btn-primary btn-full" 
+        style={{ height: '52px', marginBottom: '24px', borderRadius: '16px', fontWeight: 700 }}
+        onClick={() => { setEditingExpense(null); setIsDrawerOpen(true); }}
+      >
+        <Plus size={18} /> Добавить расход
+      </button>
 
-      <p className="section-label">История операций</p>
-      
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' }}>
-        {filteredHistory.length > 0 ? (
-          filteredHistory.map((item) => (
-            <div key={item.id} style={{ position: 'relative', borderRadius: '24px', overflow: 'hidden', background: 'var(--surface2)' }}>
-              
-              <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '120px', display: 'flex' }}>
-                <button onClick={() => handleEditClick(item)} style={{ flex: 1, background: '#ffa726', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                  <Pencil size={20} />
-                </button>
-                <button onClick={() => handleDeleteClick(item.id)} style={{ flex: 1, background: '#ff4b4b', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                  <Trash2 size={20} />
-                </button>
-              </div>
-
-              <div 
-                className="rcard" 
-                onTouchStart={e => handleTouchStart(e, item.id)}
-                onTouchEnd={e => handleTouchEnd(e, item.id)}
-                style={{ 
-                  transform: swipedItemId === item.id ? 'translateX(-120px)' : 'translateX(0)', 
-                  transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
-                  margin: 0, 
-                  position: 'relative',
-                  zIndex: 2,
-                  background: 'var(--bg)',
-                  border: '1px solid var(--divider)',
-                  alignItems: 'flex-start', 
-                  padding: '16px'
-                }}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {filteredHistory.map((item) => (
+          <div key={item.id} style={{ position: 'relative', overflow: 'hidden', borderRadius: '24px' }}>
+            {/* Кнопки под карточкой (видны при свайпе) */}
+            <div style={{ 
+              position: 'absolute', right: 0, top: 0, bottom: 0, width: '120px', 
+              display: 'flex', zIndex: 1 
+            }}>
+              <button 
+                onClick={() => handleEdit(item)}
+                style={{ flex: 1, background: '#ffa726', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                <div className="rcard-ava" style={{ background: 'var(--surface2)', marginTop: '4px' }}>{getIcon(item.category)}</div>
-                <div className="rcard-info" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <h3 style={{ fontSize: '15px', fontWeight: 800, textTransform: 'uppercase' }}>{catNames[item.category] || item.category}</h3>
-                  <p style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                    {new Date(item.date).toLocaleDateString('ru-RU')}
-                    {item.mileage ? ` · ${Number(item.mileage).toLocaleString()} км` : ''}
-                  </p>
-                  {item.description && <p style={{ fontSize: '13px', color: 'var(--text)', fontStyle: 'italic' }}>«{item.description}»</p>}
-                </div>
-                <div style={{ textAlign: 'right', marginLeft: 'auto' }}>
-                  <div style={{ fontWeight: 900, fontSize: '17px' }}>{Number(item.amount).toLocaleString()} ₽</div>
-                </div>
-              </div>
+                <Pencil size={20} />
+              </button>
+              <button 
+                onClick={() => handleDelete(item.id)}
+                style={{ flex: 1, background: '#ff4b4b', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Trash2 size={20} />
+              </button>
             </div>
-          ))
-        ) : (
-          <div className="card" style={{ textAlign: 'center', opacity: 0.5, padding: 'var(--s8) 0' }}>
-            <CalendarDays size={32} style={{ margin: '0 auto 12px', display: 'block' }} />
-            <p>Пока записей нет</p>
+
+            {/* Сама карточка */}
+            <div 
+              className="rcard" 
+              onTouchStart={e => handleTouchStart(e, item.id)}
+              onTouchEnd={e => handleTouchEnd(e, item.id)}
+              style={{ 
+                transform: swipedItemId === item.id ? 'translateX(-120px)' : 'translateX(0)', 
+                transition: 'transform 0.3s ease',
+                background: 'var(--bg)', position: 'relative', zIndex: 2, 
+                border: '1px solid var(--divider)', padding: '16px', 
+                display: 'flex', alignItems: 'center', gap: '12px'
+              }}
+            >
+              <div className="rcard-ava" style={{ background: 'var(--surface2)', flexShrink: 0 }}>{getIcon(item.category)}</div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 800, textTransform: 'uppercase' }}>{catNames[item.category] || item.category}</h3>
+                <p style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                  {new Date(item.date).toLocaleDateString()} {item.mileage ? `· ${Number(item.mileage).toLocaleString()} км` : ''}
+                </p>
+                {item.description && <p style={{ fontSize: '12px', color: 'var(--text)', marginTop: '2px', fontStyle: 'italic' }}>{item.description}</p>}
+              </div>
+              <div style={{ fontWeight: 900, fontSize: '16px', flexShrink: 0 }}>{Number(item.amount).toLocaleString()} ₽</div>
+            </div>
+          </div>
+        ))}
+        
+        {filteredHistory.length === 0 && !loading && (
+          <div style={{ textAlign: 'center', opacity: 0.5, marginTop: '40px' }}>
+            <CalendarDays size={48} style={{ margin: '0 auto 12px' }} />
+            <p>Записей не найдено</p>
           </div>
         )}
       </div>
@@ -181,7 +186,7 @@ export default function ExpensesClient() {
       <AddExpenseDrawer 
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)} 
-        onSuccess={fetchExpenses} 
+        onSuccess={fetchExpenses}
         editingItem={editingExpense}
       />
     </main>
