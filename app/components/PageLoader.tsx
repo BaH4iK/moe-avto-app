@@ -38,14 +38,13 @@ export default function PageLoader() {
           position: absolute;
           width: 100%;
           display: flex;
-          justifyContent: center;
+          justify-content: center;
           align-items: center;
-          animation: driveBackwards 4.2s infinite linear; /* Твоя скорость 4.2с */
-          will-change: transform;
+          animation: driveBackwards 1.8s infinite linear;
         }
 
         .monjaro-img {
-          width: 280px; 
+          width: 160px;
           height: auto;
           filter: drop-shadow(0 12px 25px rgba(255, 107, 0, 0.4));
           animation: bumpyRide 0.2s infinite ease-in-out;
@@ -86,18 +85,35 @@ export default function PageLoader() {
         </div>
       </div>
 
-      <p style={{ 
+      <div style={{
         position: 'absolute',
-        bottom: '10%',
-        fontSize: '11px', 
-        color: '#333', 
-        fontWeight: 800, 
-        letterSpacing: '12px',
-        textTransform: 'uppercase',
-        opacity: 0.6
+        bottom: '22%',
+        textAlign: 'center',
+        width: '100%'
       }}>
-        AUTOMATE
-      </p>
+        <h2 style={{ 
+          color: 'white', 
+          fontSize: '22px', 
+          fontWeight: 900, 
+          letterSpacing: '2px',
+          textTransform: 'uppercase',
+          margin: 0,
+          fontFamily: 'var(--font-d)'
+        }}>
+          МоёАвто
+        </h2>
+        <div style={{ 
+          marginTop: '10px', 
+          fontSize: '11px', 
+          color: '#ff6b00', 
+          fontWeight: 800,
+          textTransform: 'uppercase',
+          letterSpacing: '4px',
+          opacity: 0.8
+        }}>
+          Загрузка...
+        </div>
+      </div>
     </div>
   )
 }
