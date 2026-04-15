@@ -74,7 +74,6 @@ const CATALOG_ITEMS = [
   { id: 45, category: 'Частные мастера', name: 'АвтоМастер СТО', address: 'ул. Отрадная, 11б', phone: '+7 (978) 135-10-10', site: '' },
 ]
 
-// Список фильтров 
 const FILTERS = ['Все', 'СТО', 'Шиномонтаж', 'Запчасти', 'Страхование', 'Эвакуатор', 'Топливо', 'Детейлинг', 'Автомойки', 'Частные мастера']
 
 export default function CatalogClient() {
@@ -82,7 +81,6 @@ export default function CatalogClient() {
   const [activeFilter, setActiveFilter] = useState('Все')
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Индивидуальные иконки под каждую категорию
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'СТО': return <Wrench size={16} color="#00c853" />
@@ -98,7 +96,6 @@ export default function CatalogClient() {
     }
   }
 
-  // Умная фильтрация
   const filteredItems = CATALOG_ITEMS.filter(item => {
     const matchesFilter = activeFilter === 'Все' || item.category === activeFilter
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -107,9 +104,9 @@ export default function CatalogClient() {
   })
 
   return (
-    <main className="page active" style={{ paddingBottom: '120px' }}>
+    // Добавлена жесткая блокировка ширины для предотвращения Safari-зума
+    <main className="page active" style={{ paddingBottom: '120px', width: '100%', maxWidth: '100vw', overflowX: 'hidden', boxSizing: 'border-box' }}>
       
-      {/* ── ШАПКА С КНОПКОЙ НАЗАД ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: 'var(--s6)' }}>
         <button onClick={() => router.back()} className="icon-btn" style={{ background: 'var(--surface)', borderRadius: '50%', flexShrink: 0 }}>
           <ArrowLeft size={20} />
@@ -120,23 +117,23 @@ export default function CatalogClient() {
         </div>
       </div>
 
-      {/* ── СТРОКА ПОИСКА ── */}
       <div style={{ position: 'relative', marginBottom: 'var(--s4)' }}>
         <Search size={20} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
         <input 
           className="inp" 
           placeholder="Поиск по названию или адресу..." 
-          style={{ paddingLeft: '44px', borderRadius: '16px' }}
+          // Зафиксирован размер шрифта 16px и width 100%, чтобы айфон не увеличивал экран
+          style={{ paddingLeft: '44px', borderRadius: '16px', fontSize: '16px', width: '100%', boxSizing: 'border-box' }}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
 
-      {/* ── СВАЙП-ФИЛЬТРЫ ── */}
       <div style={{ 
         display: 'flex', gap: '8px', marginBottom: 'var(--s6)', 
         overflowX: 'auto', paddingBottom: '8px',
-        scrollbarWidth: 'none', msOverflowStyle: 'none'
+        scrollbarWidth: 'none', msOverflowStyle: 'none',
+        width: '100%', WebkitOverflowScrolling: 'touch' // Плавный скролл без расширения экрана
       }}>
         {FILTERS.map(f => (
           <button 
@@ -150,28 +147,27 @@ export default function CatalogClient() {
         ))}
       </div>
 
-      {/* ── СПИСОК КАРТОЧЕК ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
         {filteredItems.length > 0 ? (
           filteredItems.map(item => (
-            <div key={item.id} className="card" style={{ padding: '20px' }}>
+            <div key={item.id} className="card" style={{ padding: '20px', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                     {getCategoryIcon(item.category)}
                     <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--muted)' }}>
                       {item.category}
                     </span>
                   </div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 800 }}>{item.name}</h3>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, wordWrap: 'break-word' }}>{item.name}</h3>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', color: 'var(--text)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', color: 'var(--text)', width: '100%' }}>
                   <MapPin size={16} style={{ color: 'var(--muted)', marginTop: '2px', flexShrink: 0 }} />
-                  <span style={{ fontSize: '13px', lineHeight: 1.4 }}>{item.address}</span>
+                  <span style={{ fontSize: '13px', lineHeight: 1.4, flex: 1, wordBreak: 'break-word' }}>{item.address}</span>
                 </div>
                 
                 {item.phone && (
@@ -182,27 +178,26 @@ export default function CatalogClient() {
                 )}
 
                 {item.site && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text)', width: '100%', overflow: 'hidden' }}>
                     <Globe size={16} style={{ color: 'var(--muted)', flexShrink: 0 }} />
-                    <a href={`https://${item.site}`} target="_blank" rel="noreferrer" style={{ fontSize: '13px', color: 'var(--primary)', textDecoration: 'none' }}>
+                    <a href={`https://${item.site}`} target="_blank" rel="noreferrer" style={{ fontSize: '13px', color: 'var(--primary)', textDecoration: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {item.site}
                     </a>
                   </div>
                 )}
               </div>
 
-              {/* ── КНОПКИ ДЕЙСТВИЙ ── */}
-              <div style={{ display: 'grid', gridTemplateColumns: item.phone ? '1fr 1fr' : '1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: item.phone ? '1fr 1fr' : '1fr', gap: '10px', width: '100%' }}>
                 {item.phone && (
-                  <a href={`tel:${item.phone.replace(/[^0-9+]/g, '')}`} style={{ textDecoration: 'none' }}>
-                    <button className="btn btn-primary btn-full" style={{ height: '44px', fontSize: '13px', borderRadius: '12px' }}>
+                  <a href={`tel:${item.phone.replace(/[^0-9+]/g, '')}`} style={{ textDecoration: 'none', display: 'block' }}>
+                    <button className="btn btn-primary btn-full" style={{ height: '44px', fontSize: '13px', borderRadius: '12px', width: '100%' }}>
                       Позвонить
                     </button>
                   </a>
                 )}
                 <a 
                   href={`https://yandex.ru/maps/?text=Севастополь+${encodeURIComponent(item.address)}`} 
-                  target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}
+                  target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block' }}
                 >
                   <button className="btn" style={{ height: '44px', width: '100%', fontSize: '13px', borderRadius: '12px', background: 'var(--surface2)', color: 'var(--text)', border: 'none', fontWeight: 700 }}>
                     На карте
