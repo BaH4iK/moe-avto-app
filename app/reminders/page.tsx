@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { 
   ArrowLeft, ShieldAlert, Wrench, CloudSun, 
-  Save, Loader2, Calendar, Disc, ChevronRight
+  Loader2, Calendar, Disc, ChevronRight
 } from 'lucide-react'
 
 export default function RemindersPage() {
@@ -15,15 +15,16 @@ export default function RemindersPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   
-  // Настройки из базы данных
-  const [washDays, setWashDays] = useState(3)
+  // Данные профиля
   const [serviceInterval, setServiceInterval] = useState(10000)
   const [insuranceDate, setInsuranceDate] = useState('')
-  
-  // Настройки напоминаний о шинах
+  const [washDays, setWashDays] = useState(3)
+  const [totalMileage, setTotalMileage] = useState(0)
+
+  // Настройки шин
   const [tireReminder, setTireReminder] = useState(true)
   const [springMonth, setSpringMonth] = useState('Апрель')
-  const [autumnMonth, setAutumnMonth] = useState('Ноябрь')
+  const [winterMonth, setWinterMonth] = useState('Ноябрь')
 
   useEffect(() => {
     async function loadSettings() {
@@ -34,7 +35,7 @@ export default function RemindersPage() {
           if (data.wash_reminder_days) setWashDays(data.wash_reminder_days)
           if (data.service_interval) setServiceInterval(data.service_interval)
           if (data.insurance_expiry) setInsuranceDate(data.insurance_expiry)
-          // Здесь можно будет добавить загрузку месяцев шин, если добавишь поля в БД
+          if (data.car_mileage) setTotalMileage(data.car_mileage)
         }
       }
       setLoading(false)
@@ -49,16 +50,21 @@ export default function RemindersPage() {
       const { error } = await supabase.from('profiles').update({
         wash_reminder_days: washDays,
         insurance_expiry: insuranceDate
-        // Сюда добавим сохранение месяцев шин, когда обновим таблицу
       }).eq('id', user.id)
 
       if (!error) {
-        alert('Настройки успешно сохранены!')
-      } else {
-        alert('Ошибка при сохранении: ' + error.message)
+        alert('Настройки сохранены!')
       }
     }
     setSaving(false)
+  }
+
+  // Расчет дней до ОСАГО
+  const getInsDays = () => {
+    if (!insuranceDate) return '—'
+    const diff = new Date(insuranceDate).getTime() - new Date().getTime()
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
+    return days > 0 ? `${days} дн.` : 'Истекла'
   }
 
   if (loading) return null
@@ -73,6 +79,7 @@ export default function RemindersPage() {
       paddingLeft: '16px',
       paddingRight: '16px'
     }}>
+      
       {/* ── ШАПКА ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', paddingTop: '20px' }}>
         <button onClick={() => router.back()} className="icon-btn" style={{ background: 'var(--surface)', borderRadius: '50%', flexShrink: 0 }}>
@@ -80,7 +87,21 @@ export default function RemindersPage() {
         </button>
         <div>
           <h1 className="pg-title" style={{ fontSize: '24px', margin: 0, fontWeight: 900 }}>Напоминания</h1>
-          <p className="pg-sub" style={{ margin: 0 }}>Управление уведомлениями</p>
+          <p className="pg-sub" style={{ margin: 0 }}>Настройка уведомлений</p>
+        </div>
+      </div>
+
+      {/* ── СТАТУС-КАРТЫ (КАК НА РИСУНКЕ) ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px', width: '100%' }}>
+        <div className="card" style={{ padding: '16px', background: 'rgba(0,200,83,0.05)', border: '1px solid rgba(0,200,83,0.1)', boxSizing: 'border-box' }}>
+          <ShieldAlert size={18} color="#00c853" style={{ marginBottom: '8px' }} />
+          <p style={{ fontSize: '11px', color: 'var(--muted)', margin: 0 }}>ОСАГО через</p>
+          <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>{getInsDays()}</h3>
+        </div>
+        <div className="card" style={{ padding: '16px', background: 'rgba(255,107,0,0.05)', border: '1px solid rgba(255,107,0,0.1)', boxSizing: 'border-box' }}>
+          <Wrench size={18} color="var(--primary)" style={{ marginBottom: '8px' }} />
+          <p style={{ fontSize: '11px', color: 'var(--muted)', margin: 0 }}>ТО через</p>
+          <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>~2 450 км</h3>
         </div>
       </div>
 
@@ -143,7 +164,7 @@ export default function RemindersPage() {
           </div>
         </section>
 
-        {/* СМЕНА РЕЗИНЫ (ВЫБОР МЕСЯЦЕВ) */}
+        {/* СМЕНА РЕЗИНЫ (ВЫБОР МЕСЯЦЕВ ПО РИСУНКУ) */}
         <section style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <Disc size={16} className="c-primary" />
@@ -181,11 +202,11 @@ export default function RemindersPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="inp-label" style={{ fontSize: '10px', marginBottom: '4px', display: 'block' }}>Осень / Зима</label>
+                  <label className="inp-label" style={{ fontSize: '10px', marginBottom: '4px', display: 'block' }}>Зима</label>
                   <select 
                     className="inp" 
-                    value={autumnMonth} 
-                    onChange={(e) => setAutumnMonth(e.target.value)}
+                    value={winterMonth} 
+                    onChange={(e) => setWinterMonth(e.target.value)}
                     style={{ width: '100%', fontSize: '14px', height: '44px', WebkitAppearance: 'none' }}
                   >
                     {['Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'].map(m => <option key={m} value={m}>{m}</option>)}
@@ -227,7 +248,7 @@ export default function RemindersPage() {
 
       </div>
 
-      {/* КНОПКА СОХРАНЕНИЯ */}
+      {/* КНОПКА СОХРАНЕНИЯ (ФИКСИРОВАННАЯ СНИЗУ) */}
       <div style={{ position: 'fixed', bottom: 'calc(90px + env(safe-area-inset-bottom))', left: '16px', right: '16px', zIndex: 100 }}>
         <button 
           className="btn btn-primary btn-full" 
