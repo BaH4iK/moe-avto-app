@@ -250,7 +250,8 @@ export default function DashboardClient() {
           <div style={{ color: 'var(--primary)' }}><Wallet size={20} /></div>
           <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--muted)' }}>Траты</span>
         </div>
-        <div className="card" style={{ padding: '16px 4px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+        {/* ИЗМЕНЕНИЕ: Добавили роут в Каталог */}
+        <div className="card" onClick={() => router.push('/catalog')} style={{ padding: '16px 4px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
           <div style={{ color: 'var(--primary)' }}><Search size={20} /></div>
           <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--muted)' }}>Сервис</span>
         </div>

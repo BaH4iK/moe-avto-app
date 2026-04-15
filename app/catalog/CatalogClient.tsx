@@ -1,168 +1,168 @@
 'use client'
 
 import { useState } from 'react'
-import { Search } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { 
+  Search, MapPin, Phone, Globe, Star, Wrench, 
+  Fuel, Sparkles, LifeBuoy, Disc, ArrowLeft
+} from 'lucide-react'
 
-const partnersData = [
-  {
-    id: 1, category: '⛽ Топливо', icon: '⛽', title: 'Лукойл — АЗС Севастополь',
-    desc: 'Сеть заправок · 8 точек в городе · круглосуточно',
-    rating: 4.6, reviews: '2.1к',
-    badges: [], discount: '−7% для МоёАвто',
-    promo: '🎁 Скидка 7% на топливо по QR-коду из приложения · Действует до 30 апреля'
-  },
-  {
-    id: 2, category: '🔧 СТО', icon: '🔧', title: 'Авто-Люкс',
-    desc: 'Мультибрендовый сервис · ремонт и диагностика',
-    rating: 4.8, reviews: 520,
-    badges: [{ text: 'Проверен', color: 'bg' }], discount: null, promo: null, hasButtons: true
-  },
-  {
-    id: 4, category: '🧽 Автомойки', icon: '🧽', title: 'Остров',
-    desc: 'Автомойка · удобный заезд · Севастополь',
-    rating: 4.7, reviews: 205,
-    badges: [], discount: '−10% будни', promo: null
-  },
-  {
-    id: 5, category: '🛡️ Страхование', icon: '🛡️', title: 'Ингосстрах',
-    desc: 'ОСАГО, КАСКО · Оформление онлайн за 5 минут',
-    rating: 4.9, reviews: 840,
-    badges: [{ text: 'Онлайн', color: 'bb' }], discount: null, promo: null, hasButtons: true
-  },
-  {
-    id: 7, category: '🚜 Эвакуатор', icon: '🚜', title: 'Спас-Крым 24/7',
-    desc: 'Эвакуатор · Подача от 15 минут по Севастополю',
-    rating: 5.0, reviews: 94,
-    badges: [{ text: 'Круглосуточно', color: 'br' }], discount: null, promo: null, hasButtons: true
-  },
-  {
-    id: 8, category: '🛞 Шиномонтаж', icon: '🛞', title: '5 Колесо',
-    desc: 'Сеть шиномонтажных мастерских · Балансировка',
-    rating: 4.5, reviews: 320,
-    badges: [], discount: null, promo: null
-  },
-  {
-    id: 9, category: '📦 Запчасти', icon: '📦', title: 'Exist.ru Севастополь',
-    desc: 'Автозапчасти в наличии и под заказ · Хрусталева, 74',
-    rating: 4.7, reviews: '1.5к',
-    badges: [{ text: 'В наличии', color: 'bg' }], discount: null, promo: '🚚 Доставка по городу от 2000 ₽ бесплатно'
-  },
-  {
-    id: 10, category: '✨ Детейлинг', icon: '✨', title: 'Royal Detailing',
-    desc: 'Полировка кузова, химчистка, керамика 9H',
-    rating: 4.9, reviews: 156,
-    badges: [{ text: 'Премиум', color: 'bo' }], discount: '−15% на керамику', promo: null, hasButtons: true
-  },
-  {
-    id: 11, category: '👨‍🔧 Частные мастера', icon: '👨‍🔧', title: 'Мастер Андрей (Ходовая)',
-    desc: 'Ремонт подвески, замена ГРМ, диагностика · Гаражный кооператив "Волна"',
-    rating: 5.0, reviews: 42,
-    badges: [{ text: 'Выезд', color: 'bb' }], discount: null, promo: '👨‍🔧 Скидка на первый заезд 500 ₽'
-  }
+// Твои данные из таблицы (Севастополь)
+const CATALOG_ITEMS = [
+  { id: 1, category: 'СТО', name: 'Цех 313', address: 'ул. Правды, 28', phone: '+7 (978) 101-18-88', site: '' },
+  { id: 2, category: 'СТО', name: 'СТО Мастеров', address: 'Фиолентовское ш., 3/2', phone: '+7 (918) 501-44-41', site: 'sto-masterov-sev.clients.site' },
+  { id: 3, category: 'СТО', name: 'КарМастер', address: 'ул. Промышленная, 8', phone: '+7 (978) 266-26-03', site: 'stokarmaster92.ru' },
+  { id: 4, category: 'СТО', name: 'Fit Service', address: 'Фиолентовское ш., 9В/2', phone: '+7 903 456 8495', site: 'sevastopol.fitauto.ru' },
+  { id: 5, category: 'СТО', name: 'Айроверс', address: 'ул. Стахановцев, 1А', phone: '+7 (978) 555-33-30', site: 'arvs.ru' },
+  { id: 6, category: 'Шиномонтаж', name: 'Доктор шин', address: 'просп. Героев Сталинграда, 29', phone: '', site: '' },
+  { id: 7, category: 'Эвакуатор', name: 'АвтоЭвакуатор92', address: 'Курганная ул., 6', phone: '+7 (978) 556-68-98', site: 'avtoevakuator92.clients.site' },
+  { id: 8, category: 'Эвакуатор', name: 'Спас-Авто', address: 'ул. Хрусталёва, 76А', phone: '+7 (978) 145-05-83', site: 'sevastopol.eva-kyator.ru' },
+  { id: 9, category: 'Топливо', name: 'АЗС Мустанг', address: 'Севастополь', phone: '', site: '' },
+  { id: 10, category: 'Топливо', name: 'АЗС ТЭС', address: 'Севастополь', phone: '', site: '' },
+  { id: 11, category: 'Топливо', name: 'АЗС АТАН', address: 'Севастополь', phone: '', site: '' },
+  { id: 12, category: 'Детейлинг', name: 'DACAR Detailing', address: 'ул. Шелкунова, 12', phone: '+7 (978) 117-68-69', site: 'vk.link/dacar_92' },
+  { id: 13, category: 'Детейлинг', name: 'Sattva Detailing', address: 'Столетовский просп., 71', phone: '+7 (978) 785-29-05', site: 'технотим.рф' },
+  { id: 14, category: 'Детейлинг', name: 'Edelvice', address: 'ул. Хрусталёва, 74Д', phone: '+7 (978) 519-23-39', site: 'edelvice.ru' },
+  { id: 15, category: 'Детейлинг', name: 'SevDetailing', address: 'Балаклавское ш., 35', phone: '+7 (978) 713-71-39', site: 'sevdetailing.ru' },
 ]
 
-const categories = [
-  '🔧 СТО', '🛞 Шиномонтаж', '📦 Запчасти', '🛡️ Страхование', 
-  '🚜 Эвакуатор', '⛽ Топливо', '✨ Детейлинг', '🧽 Автомойки', '👨‍🔧 Частные мастера'
-]
+const FILTERS = ['Все', 'СТО', 'Детейлинг', 'Шиномонтаж', 'Эвакуатор', 'Топливо']
 
 export default function CatalogClient() {
-  const [activeChip, setActiveChip] = useState('🔧 СТО')
+  const router = useRouter()
+  const [activeFilter, setActiveFilter] = useState('Все')
   const [searchQuery, setSearchQuery] = useState('')
 
-  const filteredPartners = partnersData.filter(partner => {
-    const matchesCategory = partner.category === activeChip
-    const matchesSearch = partner.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          partner.desc.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesCategory && matchesSearch
+  // Иконки под каждую категорию
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'СТО': return <Wrench size={16} color="#00c853" />
+      case 'Детейлинг': return <Sparkles size={16} color="#b388ff" />
+      case 'Топливо': return <Fuel size={16} color="var(--primary)" />
+      case 'Эвакуатор': return <LifeBuoy size={16} color="var(--red)" />
+      case 'Шиномонтаж': return <Disc size={16} color="#2979ff" />
+      default: return <Star size={16} color="var(--primary)" />
+    }
+  }
+
+  // Умная фильтрация
+  const filteredItems = CATALOG_ITEMS.filter(item => {
+    const matchesFilter = activeFilter === 'Все' || item.category === activeFilter
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          item.address.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesFilter && matchesSearch
   })
 
   return (
     <main className="page active" style={{ paddingBottom: '120px' }}>
-      <div className="pg-head">
-        <h1 className="pg-title">Партнёры и сервисы</h1>
-        <p className="pg-sub">Севастополь · прямая запись к мастерам</p>
+      
+      {/* ── ШАПКА С КНОПКОЙ НАЗАД ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: 'var(--s6)' }}>
+        <button onClick={() => router.back()} className="icon-btn" style={{ background: 'var(--surface)', borderRadius: '50%', flexShrink: 0 }}>
+          <ArrowLeft size={20} />
+        </button>
+        <div>
+          <h1 className="pg-title" style={{ marginBottom: '2px', fontSize: '24px' }}>Каталог</h1>
+          <p className="pg-sub" style={{ fontSize: '13px' }}>Проверенные сервисы Севастополя</p>
+        </div>
       </div>
 
-      <div className="search-wrap">
-        <div className="search-ico"><Search size={16} /></div>
+      {/* ── СТРОКА ПОИСКА ── */}
+      <div style={{ position: 'relative', marginBottom: 'var(--s4)' }}>
+        <Search size={20} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
         <input 
           className="inp" 
-          type="search" 
-          placeholder="Поиск по названию или услуге..." 
+          placeholder="Поиск по названию или адресу..." 
+          style={{ paddingLeft: '44px', borderRadius: '16px' }}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
 
-      {/* ── ИСПРАВЛЕННЫЕ КАТЕГОРИИ: АВТО-ШИРИНА ── */}
+      {/* ── СВАЙП-ФИЛЬТРЫ ── */}
       <div style={{ 
-        display: 'flex', 
-        flexWrap: 'wrap', 
-        gap: '8px',
-        margin: 'var(--s4) 0' 
+        display: 'flex', gap: '8px', marginBottom: 'var(--s6)', 
+        overflowX: 'auto', paddingBottom: '8px',
+        scrollbarWidth: 'none', msOverflowStyle: 'none'
       }}>
-        {categories.map(cat => (
-          <div 
-            key={cat} 
-            className={`chip ${activeChip === cat ? 'active' : ''}`}
-            style={{ 
-              width: 'auto', // Рамка подстраивается под текст
-              fontSize: '12px',
-              padding: '10px 16px', // Комфортные отступы для длинных названий
-              whiteSpace: 'nowrap', // Текст не переносится внутри рамки
-              fontWeight: 700
-            }}
-            onClick={() => setActiveChip(cat)}
+        {FILTERS.map(f => (
+          <button 
+            key={f} 
+            className={`chip ${activeFilter === f ? 'active' : ''}`} 
+            onClick={() => setActiveFilter(f)}
+            style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
           >
-            {cat}
-          </div>
+            {f}
+          </button>
         ))}
       </div>
 
-      <p className="section-label" style={{ borderTop: '1px solid var(--divider)', paddingTop: 'var(--s6)', marginBottom: 'var(--s4)' }}>
-        {activeChip} в Севастополе
-      </p>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s4)' }}>
-        {filteredPartners.length > 0 ? (
-          filteredPartners.map(partner => (
-            <div key={partner.id} className="pcard" style={{ padding: '20px', border: '1px solid var(--divider)' }}>
-              <div className="pcard-top">
-                <div className="pcard-img" style={{ fontSize: '24px' }}>{partner.icon}</div>
-                <div className="pcard-info">
-                  <h3 style={{ fontSize: '18px', fontWeight: 900 }}>{partner.title}</h3>
-                  <p style={{ fontSize: '13px', margin: '4px 0' }}>{partner.desc}</p>
-                  <div className="pcard-meta" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                    <div className="rating-row" style={{ background: 'var(--surface2)', padding: '2px 8px', borderRadius: '8px' }}>
-                      <span className="star" style={{ color: '#ffb000' }}>★</span>
-                      <span style={{ fontWeight: 800, fontSize: '13px' }}>{partner.rating}</span>
-                      <span style={{ color: 'var(--muted)', fontSize: '12px', marginLeft: '2px' }}>({partner.reviews})</span>
-                    </div>
-                    {partner.discount && <div className="pcard-discount" style={{ fontSize: '11px' }}>{partner.discount}</div>}
-                    {partner.badges.map((b, i) => (
-                      <span key={i} className={`badge ${b.color}`} style={{ fontSize: '11px' }}>{b.text}</span>
-                    ))}
+      {/* ── СПИСОК КАРТОЧЕК ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {filteredItems.length > 0 ? (
+          filteredItems.map(item => (
+            <div key={item.id} className="card" style={{ padding: '20px' }}>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                    {getCategoryIcon(item.category)}
+                    <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--muted)' }}>
+                      {item.category}
+                    </span>
                   </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800 }}>{item.name}</h3>
                 </div>
               </div>
-              
-              {partner.promo && (
-                <div style={{ background: 'rgba(255,107,0,0.1)', color: 'var(--primary)', borderRadius: '14px', padding: '12px 16px', fontSize: '12px', fontWeight: 700, marginTop: '12px' }}>
-                  {partner.promo}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', color: 'var(--text)' }}>
+                  <MapPin size={16} style={{ color: 'var(--muted)', marginTop: '2px', flexShrink: 0 }} />
+                  <span style={{ fontSize: '13px', lineHeight: 1.4 }}>{item.address}</span>
                 </div>
-              )}
-              {partner.hasButtons && (
-                <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-                  <button className="btn btn-primary btn-sm" style={{ flex: 1.5, height: '44px', borderRadius: '12px', fontWeight: 800 }}>Записаться</button>
-                  <button className="btn btn-outline btn-sm" style={{ flex: 1, height: '44px', borderRadius: '12px', fontWeight: 800 }}>Позвонить</button>
-                </div>
-              )}
+                
+                {item.phone && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text)' }}>
+                    <Phone size={16} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '13px', fontWeight: 600 }}>{item.phone}</span>
+                  </div>
+                )}
+
+                {item.site && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text)' }}>
+                    <Globe size={16} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+                    <a href={`https://${item.site}`} target="_blank" rel="noreferrer" style={{ fontSize: '13px', color: 'var(--primary)', textDecoration: 'none' }}>
+                      {item.site}
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* ── КНОПКИ ДЕЙСТВИЙ ── */}
+              <div style={{ display: 'grid', gridTemplateColumns: item.phone ? '1fr 1fr' : '1fr', gap: '10px' }}>
+                {item.phone && (
+                  <a href={`tel:${item.phone.replace(/[^0-9+]/g, '')}`} style={{ textDecoration: 'none' }}>
+                    <button className="btn btn-primary btn-full" style={{ height: '44px', fontSize: '13px', borderRadius: '12px' }}>
+                      Позвонить
+                    </button>
+                  </a>
+                )}
+                <a 
+                  href={`https://yandex.ru/maps/?text=Севастополь+${encodeURIComponent(item.address)}`} 
+                  target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}
+                >
+                  <button className="btn" style={{ height: '44px', width: '100%', fontSize: '13px', borderRadius: '12px', background: 'var(--surface2)', color: 'var(--text)', border: 'none', fontWeight: 700 }}>
+                    На карте
+                  </button>
+                </a>
+              </div>
+
             </div>
           ))
         ) : (
-          <div style={{ textAlign: 'center', padding: 'var(--s10) 0', color: 'var(--muted)' }}>
-            <p style={{ fontSize: '14px' }}>В этой категории пока нет партнёров 😔</p>
+          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--muted)' }}>
+            <Search size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+            <p>Ничего не найдено</p>
           </div>
         )}
       </div>
