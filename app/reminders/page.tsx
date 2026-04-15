@@ -15,12 +15,12 @@ export default function RemindersPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   
-  // Настройки из БД
+  // Настройки из базы данных
   const [washDays, setWashDays] = useState(3)
   const [serviceInterval, setServiceInterval] = useState(10000)
   const [insuranceDate, setInsuranceDate] = useState('')
   
-  // Новые настройки (локально + сохранение в профиль)
+  // Настройки напоминаний о шинах
   const [tireReminder, setTireReminder] = useState(true)
   const [springMonth, setSpringMonth] = useState('Апрель')
   const [autumnMonth, setAutumnMonth] = useState('Ноябрь')
@@ -34,9 +34,7 @@ export default function RemindersPage() {
           if (data.wash_reminder_days) setWashDays(data.wash_reminder_days)
           if (data.service_interval) setServiceInterval(data.service_interval)
           if (data.insurance_expiry) setInsuranceDate(data.insurance_expiry)
-          // Если в БД будут поля для шин, можно добавить их сюда:
-          // if (data.tire_spring_month) setSpringMonth(data.tire_spring_month)
-          // if (data.tire_autumn_month) setAutumnMonth(data.tire_autumn_month)
+          // Здесь можно будет добавить загрузку месяцев шин, если добавишь поля в БД
         }
       }
       setLoading(false)
@@ -51,14 +49,13 @@ export default function RemindersPage() {
       const { error } = await supabase.from('profiles').update({
         wash_reminder_days: washDays,
         insurance_expiry: insuranceDate
-        // tire_spring_month: springMonth,
-        // tire_autumn_month: autumnMonth
+        // Сюда добавим сохранение месяцев шин, когда обновим таблицу
       }).eq('id', user.id)
 
       if (!error) {
         alert('Настройки успешно сохранены!')
       } else {
-        alert('Ошибка сохранения: ' + error.message)
+        alert('Ошибка при сохранении: ' + error.message)
       }
     }
     setSaving(false)
@@ -72,44 +69,53 @@ export default function RemindersPage() {
       width: '100%', 
       maxWidth: '100vw', 
       overflowX: 'hidden', 
-      boxSizing: 'border-box' 
+      boxSizing: 'border-box',
+      paddingLeft: '16px',
+      paddingRight: '16px'
     }}>
       {/* ── ШАПКА ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: 'var(--s6)' }}>
-        <button onClick={() => router.back()} className="icon-btn" style={{ background: 'var(--surface)', borderRadius: '50%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', paddingTop: '20px' }}>
+        <button onClick={() => router.back()} className="icon-btn" style={{ background: 'var(--surface)', borderRadius: '50%', flexShrink: 0 }}>
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="pg-title">Напоминания</h1>
-          <p className="pg-sub">Настройка уведомлений</p>
+          <h1 className="pg-title" style={{ fontSize: '24px', margin: 0, fontWeight: 900 }}>Напоминания</h1>
+          <p className="pg-sub" style={{ margin: 0 }}>Управление уведомлениями</p>
         </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
         
-        {/* СТРАХОВОЙ ПОЛИС */}
+        {/* СТРАХОВОЙ ПОЛИС (Исправлена рамка) */}
         <section style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <Calendar size={16} className="c-primary" />
-            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase' }}>Страховой полис</span>
+            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Страховой полис</span>
           </div>
-          <div className="card" style={{ padding: '16px', width: '100%', boxSizing: 'border-box' }}>
-            <label className="inp-label">Дата окончания ОСАГО</label>
+          <div className="card" style={{ padding: '16px', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
+            <label className="inp-label" style={{ marginBottom: '8px', display: 'block' }}>Дата окончания ОСАГО</label>
             <input 
               type="date" 
               className="inp" 
               value={insuranceDate}
               onChange={(e) => setInsuranceDate(e.target.value)}
-              style={{ width: '100%', boxSizing: 'border-box', fontSize: '16px', height: '48px' }} 
+              style={{ 
+                width: '100%', 
+                maxWidth: '100%',
+                boxSizing: 'border-box', 
+                fontSize: '16px', 
+                height: '48px',
+                display: 'block'
+              }} 
             />
           </div>
         </section>
 
-        {/* СЕРВИСНОЕ ТО (ПЕРЕХОД В ПРОФИЛЬ) */}
+        {/* СЕРВИСНОЕ ТО (КЛИКАБЕЛЬНО В ПРОФИЛЬ) */}
         <section style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <Wrench size={16} className="c-primary" />
-            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase' }}>Сервисное ТО</span>
+            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Сервисное ТО</span>
           </div>
           <div 
             className="card" 
@@ -124,34 +130,34 @@ export default function RemindersPage() {
               boxSizing: 'border-box'
             }}
           >
-            <div>
-              <p style={{ fontSize: '14px', fontWeight: 700 }}>Интервал замены масла</p>
-              <p style={{ fontSize: '16px', color: 'var(--primary)', fontWeight: 800, marginTop: '4px' }}>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: '14px', fontWeight: 700, margin: 0 }}>Интервал замены масла</p>
+              <p style={{ fontSize: '16px', color: 'var(--primary)', fontWeight: 800, marginTop: '4px', margin: 0 }}>
                 Раз в {serviceInterval.toLocaleString()} км
               </p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--muted)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--muted)', flexShrink: 0 }}>
               <span style={{ fontSize: '11px' }}>Изменить</span>
               <ChevronRight size={18} />
             </div>
           </div>
         </section>
 
-        {/* СМЕНА РЕЗИНЫ */}
+        {/* СМЕНА РЕЗИНЫ (ВЫБОР МЕСЯЦЕВ) */}
         <section style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <Disc size={16} className="c-primary" />
-            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase' }}>Смена резины</span>
+            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Смена резины</span>
           </div>
           <div className="card" style={{ padding: '16px', width: '100%', boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: tireReminder ? '16px' : '0' }}>
-              <p style={{ fontSize: '14px', fontWeight: 700 }}>Уведомления</p>
+              <p style={{ fontSize: '14px', fontWeight: 700, margin: 0 }}>Уведомления</p>
               <div 
                 onClick={() => setTireReminder(!tireReminder)}
                 style={{ 
                   width: '46px', height: '24px', borderRadius: '12px', 
                   background: tireReminder ? 'var(--primary)' : 'var(--surface2)',
-                  position: 'relative', transition: '0.3s', cursor: 'pointer'
+                  position: 'relative', transition: '0.3s', cursor: 'pointer', flexShrink: 0
                 }}
               >
                 <div style={{ 
@@ -164,23 +170,23 @@ export default function RemindersPage() {
             {tireReminder && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label className="inp-label" style={{ fontSize: '10px' }}>Весна</label>
+                  <label className="inp-label" style={{ fontSize: '10px', marginBottom: '4px', display: 'block' }}>Весна</label>
                   <select 
                     className="inp" 
                     value={springMonth} 
                     onChange={(e) => setSpringMonth(e.target.value)}
-                    style={{ width: '100%', fontSize: '14px', height: '44px' }}
+                    style={{ width: '100%', fontSize: '14px', height: '44px', WebkitAppearance: 'none' }}
                   >
                     {['Март', 'Апрель', 'Май'].map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="inp-label" style={{ fontSize: '10px' }}>Осень / Зима</label>
+                  <label className="inp-label" style={{ fontSize: '10px', marginBottom: '4px', display: 'block' }}>Осень / Зима</label>
                   <select 
                     className="inp" 
                     value={autumnMonth} 
                     onChange={(e) => setAutumnMonth(e.target.value)}
-                    style={{ width: '100%', fontSize: '14px', height: '44px' }}
+                    style={{ width: '100%', fontSize: '14px', height: '44px', WebkitAppearance: 'none' }}
                   >
                     {['Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'].map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
@@ -194,7 +200,7 @@ export default function RemindersPage() {
         <section style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <CloudSun size={16} className="c-primary" />
-            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase' }}>Умная мойка</span>
+            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Умная мойка</span>
           </div>
           <div className="card" style={{ padding: '16px', width: '100%', boxSizing: 'border-box' }}>
             <p style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '12px' }}>
@@ -222,12 +228,12 @@ export default function RemindersPage() {
       </div>
 
       {/* КНОПКА СОХРАНЕНИЯ */}
-      <div style={{ position: 'fixed', bottom: 'calc(90px + env(safe-area-inset-bottom))', left: '20px', right: '20px', zIndex: 100 }}>
+      <div style={{ position: 'fixed', bottom: 'calc(90px + env(safe-area-inset-bottom))', left: '16px', right: '16px', zIndex: 100 }}>
         <button 
           className="btn btn-primary btn-full" 
           onClick={handleSave}
           disabled={saving}
-          style={{ height: '56px', borderRadius: '18px', boxShadow: '0 8px 24px rgba(255,107,0,0.3)' }}
+          style={{ height: '56px', borderRadius: '18px', width: '100%', boxShadow: '0 8px 24px rgba(255,107,0,0.3)' }}
         >
           {saving ? <Loader2 className="animate-spin" /> : 'Сохранить изменения'}
         </button>

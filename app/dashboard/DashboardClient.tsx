@@ -140,31 +140,48 @@ export default function DashboardClient() {
       width: '100%', 
       maxWidth: '100vw', 
       overflowX: 'hidden',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      paddingLeft: '16px',
+      paddingRight: '16px'
     }}>
-      {/* ── ШАПКА С ТУМБЛЕРОМ ── */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', marginBottom: 'var(--s6)' }}>
-        <div style={{ textAlign: 'center' }}>
-          <h1 className="pg-title" style={{ fontSize: '26px', fontWeight: 900, marginBottom: '2px' }}>
-            {profile?.car_brand || 'Geely'} {profile?.car_model || 'Monjaro'}
-          </h1>
-          <p className="pg-sub">
-            {totalMileage.toLocaleString()} км · {profile?.city || 'Севастополь'}
-          </p>
-        </div>
-        
-        {/* Тумблер уведомлений */}
+      {/* ── ШАПКА ── */}
+      <div style={{ textAlign: 'center', marginBottom: '20px', paddingTop: '10px' }}>
+        <h1 className="pg-title" style={{ fontSize: '26px', fontWeight: 900, marginBottom: '2px' }}>
+          {profile?.car_brand || 'Geely'} {profile?.car_model || 'Monjaro'}
+        </h1>
+        <p className="pg-sub" style={{ marginBottom: '16px' }}>
+          {totalMileage.toLocaleString()} км · {profile?.city || 'Севастополь'}
+        </p>
+
+        {/* ТУМБЛЕР УВЕДОМЛЕНИЙ */}
         <div 
           onClick={toggleNotifications}
           style={{ 
-            position: 'absolute', right: '10px', top: '5px',
-            cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
+            display: 'inline-flex', 
+            alignItems: 'center', 
+            gap: '10px',
+            padding: '8px 16px',
+            background: notifEnabled ? 'rgba(255,107,0,0.1)' : 'var(--surface)',
+            borderRadius: '20px',
+            cursor: 'pointer',
+            border: `1px solid ${notifEnabled ? 'var(--primary)' : 'var(--divider)'}`,
+            transition: '0.3s'
           }}
         >
-          {notifEnabled ? <Bell size={20} color="var(--primary)" /> : <BellOff size={20} color="var(--muted)" />}
-          <span style={{ fontSize: '8px', fontWeight: 800, color: notifEnabled ? 'var(--primary)' : 'var(--muted)', textTransform: 'uppercase' }}>
-            {notifEnabled ? 'On' : 'Off'}
+          {notifEnabled ? <Bell size={18} color="var(--primary)" /> : <BellOff size={18} color="var(--muted)" />}
+          <span style={{ fontSize: '11px', fontWeight: 800, color: notifEnabled ? 'var(--primary)' : 'var(--text)', textTransform: 'uppercase' }}>
+            {notifEnabled ? 'Уведомления ВКЛ' : 'Уведомления ВЫКЛ'}
           </span>
+          <div style={{ 
+            width: '30px', height: '16px', borderRadius: '8px', 
+            background: notifEnabled ? 'var(--primary)' : 'var(--muted)',
+            position: 'relative'
+          }}>
+            <div style={{ 
+              width: '12px', height: '12px', borderRadius: '50%', background: 'white',
+              position: 'absolute', top: '2px', left: notifEnabled ? '16px' : '2px', transition: '0.3s'
+            }} />
+          </div>
         </div>
       </div>
 
@@ -189,31 +206,23 @@ export default function DashboardClient() {
         </div>
       </div>
 
-      {/* ── СЕТКА СТАТИСТИКИ (КЛИКАБЕЛЬНАЯ) ── */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: '1fr 1fr', 
-        gap: '12px', 
-        marginBottom: '20px' 
-      }}>
+      {/* ── СЕТКА СТАТИСТИКИ ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
         <div className="card" onClick={() => router.push('/expenses')} style={{ padding: '16px', cursor: 'pointer' }}>
           <p style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>Расход за месяц</p>
           <h2 style={{ fontSize: '22px', fontWeight: 900 }}>{monthlyExpenses.toLocaleString()} ₽</h2>
           <p style={{ fontSize: '10px', color: '#00c853', marginTop: '4px' }}>перейти к тратам</p>
         </div>
-        
         <div className="card" onClick={() => router.push('/reminders')} style={{ padding: '16px', cursor: 'pointer' }}>
           <p style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>Пробег в месяц</p>
           <h2 style={{ fontSize: '22px', fontWeight: 900 }}>{monthlyMileage.toLocaleString()} км</h2>
           <p style={{ fontSize: '10px', color: 'var(--primary)', marginTop: '4px' }}>напоминания</p>
         </div>
-
         <div className="card" onClick={() => router.push('/catalog')} style={{ padding: '16px', cursor: 'pointer' }}>
           <p style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>Партнёры рядом</p>
           <h2 style={{ fontSize: '22px', fontWeight: 900 }}>34</h2>
           <p style={{ fontSize: '10px', color: '#00c853', marginTop: '4px' }}>● {profile?.city || 'Севастополь'}</p>
         </div>
-
         <div className="card" style={{ padding: '16px', opacity: 0.8 }}>
           <p style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>Скидок активно</p>
           <h2 style={{ fontSize: '22px', fontWeight: 900 }}>0</h2>
@@ -227,7 +236,6 @@ export default function DashboardClient() {
           <span className="card-t">Напоминания</span>
           <span onClick={() => router.push('/reminders')} style={{ fontSize: '12px', color: 'var(--primary)', cursor: 'pointer', fontWeight: 700 }}>Все</span>
         </div>
-        
         <div className="rem-row" style={{ display: 'flex', alignItems: 'center', padding: '14px 0', borderBottom: '1px solid var(--divider)', gap: '12px' }}>
           <div style={{ width: 36, height: 36, borderRadius: 12, background: insStatus.bg, color: insStatus.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <ShieldAlert size={18} />
@@ -238,7 +246,6 @@ export default function DashboardClient() {
           </div>
           <span className="badge" style={{ fontSize: '10px', background: insStatus.bg, color: insStatus.color }}>{insStatus.text}</span>
         </div>
-
         <div className="rem-row" style={{ display: 'flex', alignItems: 'center', padding: '14px 0', borderBottom: '1px solid var(--divider)', gap: '12px' }}>
           <div style={{ width: 36, height: 36, borderRadius: 12, background: srvStatus.bg, color: srvStatus.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Wrench size={18} />
@@ -249,26 +256,10 @@ export default function DashboardClient() {
           </div>
           <span className="badge" style={{ fontSize: '10px', background: srvStatus.bg, color: srvStatus.color }}>{srvStatus.text}</span>
         </div>
-
-        <div className="rem-row" style={{ display: 'flex', alignItems: 'center', padding: '14px 0', gap: '12px' }}>
-          <div style={{ width: 36, height: 36, borderRadius: 12, background: 'rgba(0,122,255,0.1)', color: '#0a84ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <CloudSun size={18} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <h4 style={{ fontSize: '14px', fontWeight: 700 }}>Погода для мойки ☀️</h4>
-            <p style={{ fontSize: '12px', color: 'var(--muted)' }}>{profile?.wash_reminder_days || 3} дн. без осадков в Севастополе</p>
-          </div>
-          <span className="badge" style={{ fontSize: '10px', background: 'rgba(0,122,255,0.1)', color: '#0a84ff' }}>Умный совет</span>
-        </div>
       </div>
 
       {/* ── БЫСТРЫЕ ДЕЙСТВИЯ ── */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(4, 1fr)', 
-        gap: '10px',
-        marginBottom: '24px'
-      }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '24px' }}>
         <div className="card" onClick={() => router.push('/expenses')} style={{ padding: '16px 4px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
           <div style={{ color: 'var(--primary)' }}><Wallet size={20} /></div>
           <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--muted)' }}>Траты</span>
