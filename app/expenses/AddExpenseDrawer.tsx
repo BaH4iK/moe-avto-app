@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { X, Fuel, Wrench, AlertCircle, ShoppingBag, Mic, Square, Loader2 } from 'lucide-react'
 
@@ -8,6 +9,7 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
   const supabase = createClient()
   const [isListening, setIsListening] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const recognitionRef = useRef<any>(null)
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null)
   
@@ -17,6 +19,21 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
     description: '',
     mileage: ''
   })
+
+  // Для правильной работы Портала в Next.js
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Блокируем скролл заднего фона, когда шторка открыта
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [isOpen])
 
   // Подхватываем данные при редактировании или сбрасываем при создании нового
   useEffect(() => {
@@ -137,7 +154,6 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
     const { data: { user } } = await supabase.auth.getUser()
     
     if (user) {
-      // Явно добавляем user_id в payload, чтобы RLS политики не блокировали обновление
       const payload = {
         amount: parseFloat(form.amount),
         category: form.category,
@@ -156,20 +172,21 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
       } else if (data && data.length === 0) {
         alert('Запись не изменена! У вас нет прав на редактирование (RLS).')
       } else {
-        await onSuccess() // Жесткое обновление списка из базы
+        await onSuccess() 
         onClose()
       }
     }
     setIsSaving(false)
   }
 
-  if (!isOpen) return null
+  if (!isOpen || !mounted) return null
 
-  return (
+  // ИСПОЛЬЗУЕМ PORTAL: Рендерим модалку напрямую в корень документа
+  return createPortal(
     <div 
       style={{ 
         position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', 
-        zIndex: 1000, display: 'flex', 
+        zIndex: 99999, display: 'flex', 
         alignItems: 'flex-end',
         justifyContent: 'center', backdropFilter: 'blur(4px)'
       }}
@@ -179,7 +196,8 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
         width: '100%', maxWidth: '520px', 
         minHeight: '65vh', maxHeight: '90vh', 
         overflowY: 'auto', borderRadius: '24px 24px 0 0', 
-        padding: 'var(--s6) var(--s6) calc(100px + env(safe-area-inset-bottom))', 
+        // Уменьшил нижний отступ (calc 40px), т.к. меню перекрывается порталом и огромный отступ больше не нужен
+        padding: 'var(--s6) var(--s6) calc(40px + env(safe-area-inset-bottom))', 
         background: 'var(--bg)', borderTop: '1px solid var(--divider)',
         boxShadow: '0 -10px 50px rgba(0,0,0,0.5)',
         display: 'flex', flexDirection: 'column'
@@ -261,6 +279,7 @@ export default function AddExpenseDrawer({ isOpen, onClose, onSuccess, editingIt
           100% { transform: scale(1); }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body // <- Вот тут магия портала
   )
 }
