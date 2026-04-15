@@ -5,8 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { 
   ArrowLeft, ShieldAlert, Wrench, CloudSun, 
-  Save, Loader2, Info, ChevronRight, CheckCircle2,
-  Calendar, Disc, Bell
+  Save, Loader2, Calendar, Disc, ChevronRight
 } from 'lucide-react'
 
 export default function RemindersPage() {
@@ -15,13 +14,16 @@ export default function RemindersPage() {
   
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [profile, setProfile] = useState<any>(null)
   
-  // Настройки напоминаний
+  // Настройки из БД
   const [washDays, setWashDays] = useState(3)
   const [serviceInterval, setServiceInterval] = useState(10000)
   const [insuranceDate, setInsuranceDate] = useState('')
+  
+  // Новые настройки (локально + сохранение в профиль)
   const [tireReminder, setTireReminder] = useState(true)
+  const [springMonth, setSpringMonth] = useState('Апрель')
+  const [autumnMonth, setAutumnMonth] = useState('Ноябрь')
 
   useEffect(() => {
     async function loadSettings() {
@@ -29,10 +31,12 @@ export default function RemindersPage() {
       if (user) {
         const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
         if (data) {
-          setProfile(data)
           if (data.wash_reminder_days) setWashDays(data.wash_reminder_days)
           if (data.service_interval) setServiceInterval(data.service_interval)
           if (data.insurance_expiry) setInsuranceDate(data.insurance_expiry)
+          // Если в БД будут поля для шин, можно добавить их сюда:
+          // if (data.tire_spring_month) setSpringMonth(data.tire_spring_month)
+          // if (data.tire_autumn_month) setAutumnMonth(data.tire_autumn_month)
         }
       }
       setLoading(false)
@@ -46,31 +50,30 @@ export default function RemindersPage() {
     if (user) {
       const { error } = await supabase.from('profiles').update({
         wash_reminder_days: washDays,
-        service_interval: serviceInterval,
         insurance_expiry: insuranceDate
+        // tire_spring_month: springMonth,
+        // tire_autumn_month: autumnMonth
       }).eq('id', user.id)
 
       if (!error) {
         alert('Настройки успешно сохранены!')
       } else {
-        alert('Ошибка при сохранении: ' + error.message)
+        alert('Ошибка сохранения: ' + error.message)
       }
     }
     setSaving(false)
   }
 
-  // Расчет дней для плашки статуса
-  const getInsDays = () => {
-    if (!insuranceDate) return '—'
-    const diff = new Date(insuranceDate).getTime() - new Date().getTime()
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
-    return days > 0 ? `${days} дн.` : 'Истекла'
-  }
-
   if (loading) return null
 
   return (
-    <main className="page active" style={{ paddingBottom: '160px' }}>
+    <main className="page active" style={{ 
+      paddingBottom: '160px', 
+      width: '100%', 
+      maxWidth: '100vw', 
+      overflowX: 'hidden', 
+      boxSizing: 'border-box' 
+    }}>
       {/* ── ШАПКА ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: 'var(--s6)' }}>
         <button onClick={() => router.back()} className="icon-btn" style={{ background: 'var(--surface)', borderRadius: '50%' }}>
@@ -78,104 +81,126 @@ export default function RemindersPage() {
         </button>
         <div>
           <h1 className="pg-title">Напоминания</h1>
-          <p className="pg-sub">Контроль обслуживания авто</p>
+          <p className="pg-sub">Настройка уведомлений</p>
         </div>
       </div>
 
-      {/* ── КАРТОЧКИ ТЕКУЩЕГО СТАТУСА ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
-        <div className="card" style={{ padding: '16px', background: 'rgba(0,200,83,0.05)', border: '1px solid rgba(0,200,83,0.1)' }}>
-          <ShieldAlert size={18} color="#00c853" style={{ marginBottom: '8px' }} />
-          <p style={{ fontSize: '11px', color: 'var(--muted)' }}>ОСАГО через</p>
-          <h3 style={{ fontSize: '18px', fontWeight: 800 }}>{getInsDays()}</h3>
-        </div>
-        <div className="card" style={{ padding: '16px', background: 'rgba(255,107,0,0.05)', border: '1px solid rgba(255,107,0,0.1)' }}>
-          <Wrench size={18} color="var(--primary)" style={{ marginBottom: '8px' }} />
-          <p style={{ fontSize: '11px', color: 'var(--muted)' }}>Масло (интервал)</p>
-          <h3 style={{ fontSize: '18px', fontWeight: 800 }}>{serviceInterval.toLocaleString()} км</h3>
-        </div>
-      </div>
-
-      {/* ── СПИСОК НАСТРОЕК ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
         
-        {/* СТРАХОВКА */}
-        <section>
+        {/* СТРАХОВОЙ ПОЛИС */}
+        <section style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <Calendar size={16} className="c-primary" />
-            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Страховой полис</span>
+            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase' }}>Страховой полис</span>
           </div>
-          <div className="card" style={{ padding: '16px' }}>
+          <div className="card" style={{ padding: '16px', width: '100%', boxSizing: 'border-box' }}>
             <label className="inp-label">Дата окончания ОСАГО</label>
             <input 
               type="date" 
               className="inp" 
               value={insuranceDate}
               onChange={(e) => setInsuranceDate(e.target.value)}
-              style={{ width: '100%', boxSizing: 'border-box' }}
+              style={{ width: '100%', boxSizing: 'border-box', fontSize: '16px', height: '48px' }} 
             />
           </div>
         </section>
 
-        {/* ТЕХОБСЛУЖИВАНИЕ */}
-        <section>
+        {/* СЕРВИСНОЕ ТО (ПЕРЕХОД В ПРОФИЛЬ) */}
+        <section style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <Wrench size={16} className="c-primary" />
-            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Сервисное ТО</span>
+            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase' }}>Сервисное ТО</span>
           </div>
-          <div className="card" style={{ padding: '16px' }}>
-            <label className="inp-label">Интервал замены масла</label>
-            <select 
-              className="inp" 
-              style={{ width: '100%', WebkitAppearance: 'none' }}
-              value={serviceInterval}
-              onChange={(e) => setServiceInterval(Number(e.target.value))}
-            >
-              {[5000, 7000, 8000, 10000, 15000].map(v => (
-                <option key={v} value={v}>Раз в {v.toLocaleString()} км</option>
-              ))}
-            </select>
+          <div 
+            className="card" 
+            onClick={() => router.push('/profile')}
+            style={{ 
+              padding: '16px', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              cursor: 'pointer',
+              width: '100%',
+              boxSizing: 'border-box'
+            }}
+          >
+            <div>
+              <p style={{ fontSize: '14px', fontWeight: 700 }}>Интервал замены масла</p>
+              <p style={{ fontSize: '16px', color: 'var(--primary)', fontWeight: 800, marginTop: '4px' }}>
+                Раз в {serviceInterval.toLocaleString()} км
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--muted)' }}>
+              <span style={{ fontSize: '11px' }}>Изменить</span>
+              <ChevronRight size={18} />
+            </div>
           </div>
         </section>
 
-        {/* ШИНЫ */}
-        <section>
+        {/* СМЕНА РЕЗИНЫ */}
+        <section style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <Disc size={16} className="c-primary" />
-            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Сезонные шины</span>
+            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase' }}>Смена резины</span>
           </div>
-          <div className="card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <p style={{ fontSize: '14px', fontWeight: 700 }}>Смена резины</p>
-              <p style={{ fontSize: '11px', color: 'var(--muted)' }}>Напоминать в апреле и ноябре</p>
+          <div className="card" style={{ padding: '16px', width: '100%', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: tireReminder ? '16px' : '0' }}>
+              <p style={{ fontSize: '14px', fontWeight: 700 }}>Уведомления</p>
+              <div 
+                onClick={() => setTireReminder(!tireReminder)}
+                style={{ 
+                  width: '46px', height: '24px', borderRadius: '12px', 
+                  background: tireReminder ? 'var(--primary)' : 'var(--surface2)',
+                  position: 'relative', transition: '0.3s', cursor: 'pointer'
+                }}
+              >
+                <div style={{ 
+                  width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                  position: 'absolute', top: '3px', left: tireReminder ? '25px' : '3px', transition: '0.3s'
+                }} />
+              </div>
             </div>
-            <div 
-              onClick={() => setTireReminder(!tireReminder)}
-              style={{ 
-                width: '46px', height: '24px', borderRadius: '12px', 
-                background: tireReminder ? 'var(--primary)' : 'var(--surface2)',
-                position: 'relative', transition: '0.3s', cursor: 'pointer'
-              }}
-            >
-              <div style={{ 
-                width: '18px', height: '18px', borderRadius: '50%', background: 'white',
-                position: 'absolute', top: '3px', left: tireReminder ? '25px' : '3px', transition: '0.3s'
-              }} />
-            </div>
+
+            {tireReminder && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label className="inp-label" style={{ fontSize: '10px' }}>Весна</label>
+                  <select 
+                    className="inp" 
+                    value={springMonth} 
+                    onChange={(e) => setSpringMonth(e.target.value)}
+                    style={{ width: '100%', fontSize: '14px', height: '44px' }}
+                  >
+                    {['Март', 'Апрель', 'Май'].map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="inp-label" style={{ fontSize: '10px' }}>Осень / Зима</label>
+                  <select 
+                    className="inp" 
+                    value={autumnMonth} 
+                    onChange={(e) => setAutumnMonth(e.target.value)}
+                    style={{ width: '100%', fontSize: '14px', height: '44px' }}
+                  >
+                    {['Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'].map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
-        {/* МОЙКА */}
-        <section>
+        {/* УМНАЯ МОЙКА */}
+        <section style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <CloudSun size={16} className="c-primary" />
-            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Умная мойка</span>
+            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase' }}>Умная мойка</span>
           </div>
-          <div className="card" style={{ padding: '16px' }}>
+          <div className="card" style={{ padding: '16px', width: '100%', boxSizing: 'border-box' }}>
             <p style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '12px' }}>
               Предлагать мойку, если нет дождя (дней):
             </p>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
               {[1, 2, 3, 5, 7].map(day => (
                 <button 
                   key={day}
@@ -196,15 +221,15 @@ export default function RemindersPage() {
 
       </div>
 
-      {/* ── КНОПКА СОХРАНЕНИЯ ── */}
-      <div style={{ position: 'fixed', bottom: 'calc(90px + env(safe-area-inset-bottom))', left: '20px', right: '20px' }}>
+      {/* КНОПКА СОХРАНЕНИЯ */}
+      <div style={{ position: 'fixed', bottom: 'calc(90px + env(safe-area-inset-bottom))', left: '20px', right: '20px', zIndex: 100 }}>
         <button 
           className="btn btn-primary btn-full" 
           onClick={handleSave}
           disabled={saving}
           style={{ height: '56px', borderRadius: '18px', boxShadow: '0 8px 24px rgba(255,107,0,0.3)' }}
         >
-          {saving ? <Loader2 className="animate-spin" /> : 'Сохранить настройки'}
+          {saving ? <Loader2 className="animate-spin" /> : 'Сохранить изменения'}
         </button>
       </div>
     </main>
