@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { 
   ArrowLeft, ShieldAlert, Wrench, CloudSun, 
-  Save, Loader2, Info, ChevronRight, CheckCircle2
+  Save, Loader2, Info, ChevronRight, CheckCircle2,
+  Calendar, Disc, Bell
 } from 'lucide-react'
 
 export default function RemindersPage() {
@@ -19,6 +20,8 @@ export default function RemindersPage() {
   // Настройки напоминаний
   const [washDays, setWashDays] = useState(3)
   const [serviceInterval, setServiceInterval] = useState(10000)
+  const [insuranceDate, setInsuranceDate] = useState('')
+  const [tireReminder, setTireReminder] = useState(true)
 
   useEffect(() => {
     async function loadSettings() {
@@ -29,6 +32,7 @@ export default function RemindersPage() {
           setProfile(data)
           if (data.wash_reminder_days) setWashDays(data.wash_reminder_days)
           if (data.service_interval) setServiceInterval(data.service_interval)
+          if (data.insurance_expiry) setInsuranceDate(data.insurance_expiry)
         }
       }
       setLoading(false)
@@ -39,127 +43,168 @@ export default function RemindersPage() {
   const handleSave = async () => {
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
-    
-    const { error } = await supabase
-      .from('profiles')
-      .update({
+    if (user) {
+      const { error } = await supabase.from('profiles').update({
         wash_reminder_days: washDays,
-        service_interval: serviceInterval
-      })
-      .eq('id', user?.id)
+        service_interval: serviceInterval,
+        insurance_expiry: insuranceDate
+      }).eq('id', user.id)
 
-    if (!error) {
-      router.refresh()
-      setTimeout(() => setSaving(false), 500)
-    } else {
-      alert('Ошибка сохранения')
-      setSaving(false)
+      if (!error) {
+        alert('Настройки успешно сохранены!')
+      } else {
+        alert('Ошибка при сохранении: ' + error.message)
+      }
     }
+    setSaving(false)
   }
 
-  if (loading) return <div className="page active" style={{display:'flex', justifyContent:'center', alignItems:'center'}}><Loader2 className="animate-spin" size={32} color="var(--primary)" /></div>
+  // Расчет дней для плашки статуса
+  const getInsDays = () => {
+    if (!insuranceDate) return '—'
+    const diff = new Date(insuranceDate).getTime() - new Date().getTime()
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
+    return days > 0 ? `${days} дн.` : 'Истекла'
+  }
+
+  if (loading) return null
 
   return (
-    // Увеличен paddingBottom, чтобы контент прокручивался выше кнопки
-    <main className="page active" style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
-      <div className="pg-head" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <button onClick={() => router.back()} className="icon-btn" style={{background:'var(--surface)'}}>
-          <ArrowLeft size={20}/>
+    <main className="page active" style={{ paddingBottom: '160px' }}>
+      {/* ── ШАПКА ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: 'var(--s6)' }}>
+        <button onClick={() => router.back()} className="icon-btn" style={{ background: 'var(--surface)', borderRadius: '50%' }}>
+          <ArrowLeft size={20} />
         </button>
-        <h1 className="pg-title" style={{marginBottom:0}}>Напоминания</h1>
+        <div>
+          <h1 className="pg-title">Напоминания</h1>
+          <p className="pg-sub">Контроль обслуживания авто</p>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '24px' }}>
+      {/* ── КАРТОЧКИ ТЕКУЩЕГО СТАТУСА ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+        <div className="card" style={{ padding: '16px', background: 'rgba(0,200,83,0.05)', border: '1px solid rgba(0,200,83,0.1)' }}>
+          <ShieldAlert size={18} color="#00c853" style={{ marginBottom: '8px' }} />
+          <p style={{ fontSize: '11px', color: 'var(--muted)' }}>ОСАГО через</p>
+          <h3 style={{ fontSize: '18px', fontWeight: 800 }}>{getInsDays()}</h3>
+        </div>
+        <div className="card" style={{ padding: '16px', background: 'rgba(255,107,0,0.05)', border: '1px solid rgba(255,107,0,0.1)' }}>
+          <Wrench size={18} color="var(--primary)" style={{ marginBottom: '8px' }} />
+          <p style={{ fontSize: '11px', color: 'var(--muted)' }}>Масло (интервал)</p>
+          <h3 style={{ fontSize: '18px', fontWeight: 800 }}>{serviceInterval.toLocaleString()} км</h3>
+        </div>
+      </div>
+
+      {/* ── СПИСОК НАСТРОЕК ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         
         {/* СТРАХОВКА */}
-        <div className="card" style={{ borderLeft: '4px solid #ff4b4b' }}>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-            <div className="rem-ico r"><ShieldAlert size={20} /></div>
-            <div style={{ flex: 1 }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 800 }}>Страховка ОСАГО</h3>
-              <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '4px' }}>
-                Истекает {profile?.insurance_expiry ? new Date(profile.insurance_expiry).toLocaleDateString('ru-RU') : 'не указано'}
-              </p>
-              <button 
-                onClick={() => router.push('/profile')}
-                style={{ marginTop: '12px', fontSize: '12px', color: 'var(--primary)', background: 'none', border: 'none', padding: 0, fontWeight: 700, cursor: 'pointer' }}
-              >
-                Изменить дату в профиле
-              </button>
-            </div>
+        <section>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <Calendar size={16} className="c-primary" />
+            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Страховой полис</span>
           </div>
-        </div>
+          <div className="card" style={{ padding: '16px' }}>
+            <label className="inp-label">Дата окончания ОСАГО</label>
+            <input 
+              type="date" 
+              className="inp" 
+              value={insuranceDate}
+              onChange={(e) => setInsuranceDate(e.target.value)}
+              style={{ width: '100%', boxSizing: 'border-box' }}
+            />
+          </div>
+        </section>
 
         {/* ТЕХОБСЛУЖИВАНИЕ */}
-        <div className="card" style={{ borderLeft: '4px solid var(--primary)' }}>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-            <div className="rem-ico y"><Wrench size={20} /></div>
-            <div style={{ flex: 1 }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 800 }}>Тех. обслуживание</h3>
-              <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>Интервал замены масла и фильтров</p>
-              
-              <div style={{ marginTop: '16px' }}>
-                <label style={{ fontSize: '11px', color: 'var(--muted)', display: 'block', marginBottom: '8px' }}>Через сколько км делать ТО?</label>
-                <select 
-                  className="inp" 
-                  value={serviceInterval}
-                  onChange={(e) => setServiceInterval(Number(e.target.value))}
-                  style={{ background: 'var(--bg)', borderRadius: '12px', height: '48px' }}
-                >
-                  {[5000, 6000, 7000, 8000, 9000, 10000].map(val => (
-                    <option key={val} value={val}>{val.toLocaleString()} км</option>
-                  ))}
-                </select>
-              </div>
-              <p style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '12px', lineHeight: 1.4 }}>
-                <Info size={10} style={{display:'inline', marginRight: '4px'}}/> 
-                Мы берем пробег из последнего чека в категории «Сервис» и прибавляем этот интервал.
-              </p>
+        <section>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <Wrench size={16} className="c-primary" />
+            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Сервисное ТО</span>
+          </div>
+          <div className="card" style={{ padding: '16px' }}>
+            <label className="inp-label">Интервал замены масла</label>
+            <select 
+              className="inp" 
+              style={{ width: '100%', WebkitAppearance: 'none' }}
+              value={serviceInterval}
+              onChange={(e) => setServiceInterval(Number(e.target.value))}
+            >
+              {[5000, 7000, 8000, 10000, 15000].map(v => (
+                <option key={v} value={v}>Раз в {v.toLocaleString()} км</option>
+              ))}
+            </select>
+          </div>
+        </section>
+
+        {/* ШИНЫ */}
+        <section>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <Disc size={16} className="c-primary" />
+            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Сезонные шины</span>
+          </div>
+          <div className="card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <p style={{ fontSize: '14px', fontWeight: 700 }}>Смена резины</p>
+              <p style={{ fontSize: '11px', color: 'var(--muted)' }}>Напоминать в апреле и ноябре</p>
+            </div>
+            <div 
+              onClick={() => setTireReminder(!tireReminder)}
+              style={{ 
+                width: '46px', height: '24px', borderRadius: '12px', 
+                background: tireReminder ? 'var(--primary)' : 'var(--surface2)',
+                position: 'relative', transition: '0.3s', cursor: 'pointer'
+              }}
+            >
+              <div style={{ 
+                width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                position: 'absolute', top: '3px', left: tireReminder ? '25px' : '3px', transition: '0.3s'
+              }} />
             </div>
           </div>
-        </div>
+        </section>
 
         {/* МОЙКА */}
-        <div className="card" style={{ borderLeft: '4px solid var(--blue)' }}>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-            <div className="rem-ico b"><CloudSun size={20} /></div>
-            <div style={{ flex: 1 }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 800 }}>Мойка</h3>
-              <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>Умный совет на основе прогноза погоды</p>
-              
-              <div style={{ marginTop: '16px' }}>
-                <label style={{ fontSize: '11px', color: 'var(--muted)', display: 'block', marginBottom: '8px' }}>Порог дней без осадков</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {[1, 2, 3, 5, 7].map(day => (
-                    <button 
-                      key={day}
-                      onClick={() => setWashDays(day)}
-                      style={{ 
-                        flex: 1, height: '40px', borderRadius: '10px', fontSize: '13px', fontWeight: 700,
-                        background: washDays === day ? 'var(--blue)' : 'var(--bg)',
-                        color: washDays === day ? 'white' : 'var(--text)',
-                        border: '1px solid var(--divider)', transition: '0.2s'
-                      }}
-                    >
-                      {day}д
-                    </button>
-                  ))}
-                </div>
-              </div>
+        <section>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <CloudSun size={16} className="c-primary" />
+            <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Умная мойка</span>
+          </div>
+          <div className="card" style={{ padding: '16px' }}>
+            <p style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '12px' }}>
+              Предлагать мойку, если нет дождя (дней):
+            </p>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {[1, 2, 3, 5, 7].map(day => (
+                <button 
+                  key={day}
+                  onClick={() => setWashDays(day)}
+                  style={{ 
+                    flex: 1, height: '40px', borderRadius: '10px', fontSize: '13px', fontWeight: 700,
+                    background: washDays === day ? 'var(--primary)' : 'var(--surface)',
+                    color: washDays === day ? 'white' : 'var(--text)',
+                    border: '1px solid var(--divider)', transition: '0.2s'
+                  }}
+                >
+                  {day}д
+                </button>
+              ))}
             </div>
           </div>
-        </div>
+        </section>
+
       </div>
 
-      {/* Кнопка опущена до 80px над нижним краем, чтобы не перекрывать центр */}
-      <div style={{ position: 'fixed', bottom: 'calc(80px + env(safe-area-inset-bottom))', left: 'var(--s4)', right: 'var(--s4)' }}>
+      {/* ── КНОПКА СОХРАНЕНИЯ ── */}
+      <div style={{ position: 'fixed', bottom: 'calc(90px + env(safe-area-inset-bottom))', left: '20px', right: '20px' }}>
         <button 
           className="btn btn-primary btn-full" 
           onClick={handleSave}
           disabled={saving}
           style={{ height: '56px', borderRadius: '18px', boxShadow: '0 8px 24px rgba(255,107,0,0.3)' }}
         >
-          {saving ? <Loader2 className="animate-spin" /> : <><Save size={18} style={{marginRight:'8px'}}/> Сохранить настройки</>}
+          {saving ? <Loader2 className="animate-spin" /> : 'Сохранить настройки'}
         </button>
       </div>
     </main>

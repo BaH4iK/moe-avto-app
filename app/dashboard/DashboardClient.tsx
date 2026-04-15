@@ -173,28 +173,32 @@ export default function DashboardClient() {
         gap: '12px', 
         marginBottom: '20px' 
       }}>
-        <div className="card" style={{ padding: '16px' }}>
+        {/* КЛИКАБЕЛЬНО: Расход за месяц */}
+        <div className="card" onClick={() => router.push('/expenses')} style={{ padding: '16px', cursor: 'pointer' }}>
           <p style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>Расход за месяц</p>
           <h2 style={{ fontSize: '22px', fontWeight: 900 }}>{monthlyExpenses.toLocaleString()} ₽</h2>
-          <p style={{ fontSize: '10px', color: '#00c853', marginTop: '4px' }}>за этот месяц</p>
+          <p style={{ fontSize: '10px', color: '#00c853', marginTop: '4px' }}>перейти к тратам</p>
         </div>
         
-        <div className="card" style={{ padding: '16px' }}>
+        {/* КЛИКАБЕЛЬНО: Пробег в месяц */}
+        <div className="card" onClick={() => router.push('/reminders')} style={{ padding: '16px', cursor: 'pointer' }}>
           <p style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>Пробег в месяц</p>
           <h2 style={{ fontSize: '22px', fontWeight: 900 }}>{monthlyMileage.toLocaleString()} км</h2>
-          <p style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>за этот месяц</p>
+          <p style={{ fontSize: '10px', color: 'var(--primary)', marginTop: '4px' }}>напоминания</p>
         </div>
 
-        <div className="card" style={{ padding: '16px' }}>
+        {/* КЛИКАБЕЛЬНО: Партнёры рядом */}
+        <div className="card" onClick={() => router.push('/catalog')} style={{ padding: '16px', cursor: 'pointer' }}>
           <p style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>Партнёры рядом</p>
           <h2 style={{ fontSize: '22px', fontWeight: 900 }}>34</h2>
           <p style={{ fontSize: '10px', color: '#00c853', marginTop: '4px' }}>● {profile?.city || 'Севастополь'}</p>
         </div>
 
-        <div className="card" style={{ padding: '16px' }}>
+        {/* ЗНАЧЕНИЕ 0: Скидок активно */}
+        <div className="card" style={{ padding: '16px', opacity: 0.8 }}>
           <p style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>Скидок активно</p>
-          <h2 style={{ fontSize: '22px', fontWeight: 900 }}>6</h2>
-          <p style={{ fontSize: '10px', color: 'var(--primary)', marginTop: '4px' }}>🏷️ от партнёров</p>
+          <h2 style={{ fontSize: '22px', fontWeight: 900 }}>0</h2>
+          <p style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>скоро появится</p>
         </div>
       </div>
 
@@ -250,7 +254,6 @@ export default function DashboardClient() {
           <div style={{ color: 'var(--primary)' }}><Wallet size={20} /></div>
           <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--muted)' }}>Траты</span>
         </div>
-        {/* ИЗМЕНЕНИЕ: Добавили роут в Каталог */}
         <div className="card" onClick={() => router.push('/catalog')} style={{ padding: '16px 4px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
           <div style={{ color: 'var(--primary)' }}><Search size={20} /></div>
           <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--muted)' }}>Сервис</span>
@@ -285,7 +288,7 @@ export default function DashboardClient() {
           <div>
             <h4 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '2px' }}>Добавьте на главный экран</h4>
             <p style={{ fontSize: '11px', color: 'var(--muted)', lineHeight: 1.4 }}>
-              Safari → Поделиться → «На экран «Домой» — и AutoMate работает как приложение
+              Safari → Поделиться → «На экран «Домой» — и МоёАвто работает как приложение
             </p>
           </div>
         </div>
